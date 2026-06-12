@@ -19,12 +19,7 @@ function extractTrigger(text) {
   return null
 }
 
-// Placeholder — PR#3 wires this to the LLM scene compiler
-function submitCommand(text) {
-  console.log('[submitCommand]', text)
-}
-
-export default function InputPanel() {
+export default function InputPanel({ onSubmitCommand }) {
   const { isSupported, isListening, interimText, finalText, error, start, stop, clearTranscript } =
     useSpeechRecognition()
   const textRef = useRef(null)
@@ -44,24 +39,24 @@ export default function InputPanel() {
     if (cleaned === null) return  // no trigger found
     stop()
     clearTranscript()
-    if (cleaned) submitCommand(cleaned)  // skip empty-string submit (trigger-word-only utterance)
-  }, [finalText, stop, clearTranscript])
+    if (cleaned) onSubmitCommand(cleaned)  // skip empty-string submit (trigger-word-only utterance)
+  }, [finalText, stop, clearTranscript, onSubmitCommand])
 
   const handleVoiceSubmit = useCallback(() => {
     const text = finalText.trim()
     if (!text) return
-    submitCommand(text)
+    onSubmitCommand(text)
     clearTranscript()
-  }, [finalText, clearTranscript])
+  }, [finalText, clearTranscript, onSubmitCommand])
 
   const handleTextKey = useCallback((e) => {
     if (e.key !== 'Enter' || e.shiftKey) return
     e.preventDefault()
     const text = e.currentTarget.value.trim()
     if (!text) return
-    submitCommand(text)
+    onSubmitCommand(text)
     e.currentTarget.value = ''
-  }, [])
+  }, [onSubmitCommand])
 
   return (
     <div className={styles.panel}>

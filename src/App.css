@@ -1,22 +1,97 @@
 .app {
-  min-height: 100vh;
-  padding: 2rem 1rem;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .app-header {
   text-align: center;
-  margin-bottom: 2rem;
+  padding: 0.6rem 1rem 0.5rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid #dee2e6;
+  background: #fff;
 }
 
 .app-header h1 {
-  font-size: 1.75rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #212529;
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.15rem;
 }
 
 .app-header p {
   color: #6c757d;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   margin: 0;
+}
+
+/* ── Main layout ── */
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.75rem 1rem;
+  gap: 0.6rem;
+}
+
+/* ── Pending text strip ── */
+
+.pending-text {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  color: #495057;
+  padding: 0.35rem 0.75rem;
+  background: #e9ecef;
+  border-radius: 6px;
+}
+
+.pending-label {
+  font-weight: 600;
+  color: #868e96;
+  margin-right: 0.2rem;
+}
+
+/* ── Canvas toolbar ── */
+
+.canvas-controls {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-demo,
+.btn-clear {
+  padding: 0.35rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.btn-demo {
+  background: #7950f2;
+  color: #fff;
+}
+.btn-demo:hover { background: #6741d9; }
+
+.btn-clear {
+  background: #e9ecef;
+  color: #495057;
+}
+.btn-clear:hover { background: #dee2e6; }
+
+/* ── Canvas container ── */
+
+.canvas-wrap {
+  flex: 1;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  min-height: 180px;
 }
