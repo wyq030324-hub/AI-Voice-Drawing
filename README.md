@@ -18,7 +18,7 @@
 
 ## 技术栈
 
-React + Vite · Web Speech API · LLM 场景编译 · SVG 渲染
+React + Vite · Web Speech API · LLM 场景编译 · Canvas 2D 渲染
 
 ## 运行
 
@@ -29,5 +29,5 @@ npm run dev
 
 ## 第三方依赖声明
 
-React / Vite(框架与构建)、rough.js(手绘风格渲染)、LLM API(命令解析)。
+React / Vite(框架与构建)、LLM API(命令解析)、Canvas 2D API(画布渲染)。
 场景编译 prompt、场景图数据结构、命令执行器、步骤可视化与撤销机制为本项目原创。

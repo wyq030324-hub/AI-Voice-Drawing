@@ -1,23 +1,33 @@
-export default function CommandPreview({ commands, currentIndex, caption }) {
+export default function CommandPreview({ commands, currentIndex, caption, status = 'idle' }) {
   if (!commands.length) return null
+
+  const isRunning = status === 'running'
+  const isDone = status === 'done'
 
   return (
     <aside className="command-preview">
       {caption && (
         <div className="preview-caption">已理解：{caption}</div>
       )}
-      <div className="preview-subtitle">正在执行：</div>
+      <div className={`preview-state${isDone ? ' done' : isRunning ? ' running' : ''}`}>
+        {isRunning
+          ? `正在执行第 ${Math.max(currentIndex + 1, 1)}/${commands.length} 步`
+          : isDone
+            ? '全部完成'
+            : '已解析'}
+      </div>
       <ol className="preview-list">
         {commands.map((cmd, i) => {
-          const isActive = i === currentIndex
-          const isDone   = i < currentIndex
+          const isActive = isRunning && i === currentIndex
+          const isFinished = isDone || i < currentIndex
           return (
             <li
               key={i}
-              className={`preview-item${isActive ? ' active' : isDone ? ' done' : ''}`}
+              className={`preview-item${isActive ? ' active' : isFinished ? ' done' : ''}`}
             >
-              {describeCommand(cmd)}
-              {isActive && <span className="preview-cursor"> ←</span>}
+              <span className="preview-text">{describeCommand(cmd)}</span>
+              {isActive && <span className="preview-badge active">进行中</span>}
+              {isFinished && <span className="preview-badge done">已完成</span>}
             </li>
           )
         })}
