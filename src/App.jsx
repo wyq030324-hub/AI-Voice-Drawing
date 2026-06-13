@@ -28,8 +28,10 @@ export default function App() {
   const [llmLoading,          setLlmLoading]          = useState(false)
   const [errorMsg,            setErrorMsg]            = useState('')
   const [statusText,          setStatusText]          = useState('')
-  const [pendingCommands,     setPendingCommands]     = useState([])
-  const [pendingCommandIndex, setPendingCommandIndex] = useState(-1)
+  const [previewCommands,     setPreviewCommands]     = useState([])
+  const [previewCommandIndex, setPreviewCommandIndex] = useState(-1)
+  const [previewCaption,      setPreviewCaption]      = useState('')
+  const [previewState,        setPreviewState]        = useState('idle')
   // Only lengths are state; actual stacks live in refs to avoid stale-closure issues
   const [undoLen, setUndoLen] = useState(0)
   const [redoLen, setRedoLen] = useState(0)
@@ -74,8 +76,9 @@ export default function App() {
   // Each step updates objectsRef directly so the next applyCommand sees the latest scene.
   // Snapshot is NOT taken here — caller does one pushSnapshot() before invoking runCommands().
   const runCommands = useCallback(async (commands) => {
+    setPreviewState('running')
     for (let i = 0; i < commands.length; i++) {
-      setPendingCommandIndex(i)
+      setPreviewCommandIndex(i)
       setDrawingStatus({ current: i + 1, total: commands.length })
       const newObjs = applyCommand(objectsRef.current, commands[i])
       objectsRef.current = newObjs
@@ -83,12 +86,13 @@ export default function App() {
       await new Promise(r => setTimeout(r, STEP_DELAY_MS))
     }
     setDrawingStatus(null)
-    setPendingCommandIndex(-1)
+    setPreviewCommandIndex(-1)
+    setPreviewState('done')
   }, [])
 
   // ── Clear canvas (undo-aware) ──
   const handleClearCanvas = useCallback(() => {
-    if (busyRef.current) return
+    if (busyRef.current || objectsRef.current.length === 0) return
     pushSnapshot()
     objectsRef.current = []
     setObjects([])
@@ -111,8 +115,6 @@ export default function App() {
     setErrorMsg('')
     setStatusText(text)
     setLlmLoading(true)
-    setPendingCommands([])
-    setPendingCommandIndex(-1)
 
     try {
       const { commands, error } = await compile(text, objectsRef.current)
@@ -127,9 +129,9 @@ export default function App() {
       if (commands.length) {
         // One snapshot for the entire submission — not per-command
         pushSnapshot()
-        setPendingCommands(commands)
+        setPreviewCommands(commands)
+        setPreviewCaption(text)
         await runCommands(commands)
-        setPendingCommands([])
       }
       setStatusText('')
     } finally {
@@ -144,10 +146,10 @@ export default function App() {
     busyRef.current = true
     setErrorMsg('')
     pushSnapshot()
-    setPendingCommands(DEMO_COMMANDS)
+    setPreviewCommands(DEMO_COMMANDS)
+    setPreviewCaption('测试绘制')
     runCommands(DEMO_COMMANDS).finally(() => {
       busyRef.current = false
-      setPendingCommands([])
     })
   }, [runCommands, pushSnapshot])
 
@@ -186,9 +188,10 @@ export default function App() {
             <DrawCanvas objects={objects} />
           </div>
           <CommandPreview
-            commands={pendingCommands}
-            currentIndex={pendingCommandIndex}
-            caption={statusText}
+            commands={previewCommands}
+            currentIndex={previewCommandIndex}
+            caption={previewCaption}
+            status={previewState}
           />
         </div>
       </main>
