@@ -63,6 +63,16 @@ export default function InputPanel({ onSubmitCommand, disabled = false }) {
     e.currentTarget.value = ''
   }, [disabled, onSubmitCommand])
 
+  const handleTextSubmit = useCallback((e) => {
+    e.preventDefault()
+    if (disabled) return
+    const input = textRef.current
+    const text = input?.value.trim()
+    if (!text) return
+    onSubmitCommand(text)
+    input.value = ''
+  }, [disabled, onSubmitCommand])
+
   return (
     <div className={styles.panel}>
       {/* ── Voice section (only rendered when the API exists) ── */}
@@ -108,7 +118,7 @@ export default function InputPanel({ onSubmitCommand, disabled = false }) {
       )}
 
       {/* ── Text fallback ── */}
-      <section className={styles.textSection}>
+      <form className={styles.textSection} onSubmit={handleTextSubmit}>
         <label
           htmlFor="cmd-input"
           className={`${styles.label} ${speechUnavailable ? styles.labelHighlighted : ''}`}
@@ -122,8 +132,12 @@ export default function InputPanel({ onSubmitCommand, disabled = false }) {
           className={`${styles.textInput} ${speechUnavailable ? styles.textInputHighlighted : ''}`}
           placeholder="输入绘图指令，按 Enter 提交…"
           onKeyDown={handleTextKey}
+          disabled={disabled}
         />
-      </section>
+        <button className={styles.textSubmit} type="submit" disabled={disabled}>
+          提交
+        </button>
+      </form>
     </div>
   )
 }

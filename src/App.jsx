@@ -1,7 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import InputPanel from './components/InputPanel'
 import DrawCanvas from './components/DrawCanvas'
-import CommandPreview from './components/CommandPreview'
+import EditorTopBar from './components/EditorTopBar'
+import ToolRail from './components/ToolRail'
+import RightPanel from './components/RightPanel'
+import BottomCommandBar from './components/BottomCommandBar'
 import { applyCommand } from './commands/executor'
 import { compile } from './llm/compiler'
 import './App.css'
@@ -154,47 +156,70 @@ export default function App() {
   }, [runCommands, pushSnapshot])
 
   const isBusy = llmLoading || drawingStatus !== null
+  const statusLabel = drawingStatus
+    ? `正在执行第 ${drawingStatus.current}/${drawingStatus.total} 步`
+    : llmLoading
+      ? '正在调用 AI'
+      : errorMsg
+        ? '发生错误'
+        : previewState === 'done' && previewCommands.length
+          ? '全部完成'
+          : '等待指令'
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>AI Voice Drawing</h1>
-        <p>说出你的想法，AI 将为你绘制可编辑的矢量场景</p>
-      </header>
+    <div className="app editor-app">
+      <EditorTopBar
+        isBusy={isBusy}
+        undoLen={undoLen}
+        redoLen={redoLen}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onClear={handleClearCanvas}
+      />
 
-      <main className="app-main">
-        <InputPanel onSubmitCommand={handleSubmitCommand} disabled={isBusy} />
+      <main className="editor-main">
+        <ToolRail isBusy={isBusy} onDemo={handleDemo} />
 
-        {/* Status bar — shown while LLM is thinking or while drawing */}
-        {(llmLoading || drawingStatus) && (
-          <div className="status-bar">
-            {drawingStatus
-              ? `正在绘制：第 ${drawingStatus.current}/${drawingStatus.total} 步${statusText ? ` — ${statusText}` : ''}`
-              : `AI 理解中…${statusText ? ` — ${statusText}` : ''}`}
+        <section className="canvas-workspace" aria-label="画布区域">
+          <div className="canvas-status-row">
+            <div className={`editor-status${llmLoading || drawingStatus ? ' active' : ''}${errorMsg ? ' error' : ''}`}>
+              <span className="status-kicker">{statusLabel}</span>
+              {statusText && <span className="status-detail">{statusText}</span>}
+            </div>
+            <div className="scene-counter">{objects.length} 个对象</div>
           </div>
-        )}
 
-        {errorMsg && <div className="error-msg">{errorMsg}</div>}
+          {errorMsg && <div className="error-msg">{errorMsg}</div>}
 
-        <div className="canvas-controls">
-          <button className="btn-demo"  onClick={handleDemo}        disabled={isBusy}>测试绘制</button>
-          <button className="btn-undo"  onClick={handleUndo}        disabled={isBusy || undoLen === 0}>撤销</button>
-          <button className="btn-redo"  onClick={handleRedo}        disabled={isBusy || redoLen === 0}>重做</button>
-          <button className="btn-clear" onClick={handleClearCanvas} disabled={isBusy}>清空画布</button>
-        </div>
-
-        <div className="canvas-section">
-          <div className="canvas-wrap">
-            <DrawCanvas objects={objects} />
+          <div className="canvas-shell">
+            {objects.length === 0 && !isBusy && (
+              <div className="canvas-empty-state">
+                <strong>从一句话开始绘画</strong>
+                <span>在底部输入或说出你的创作想法，AI 会逐步生成可编辑对象。</span>
+              </div>
+            )}
+            <div className="canvas-wrap">
+              <DrawCanvas objects={objects} />
+            </div>
           </div>
-          <CommandPreview
-            commands={previewCommands}
-            currentIndex={previewCommandIndex}
-            caption={previewCaption}
-            status={previewState}
-          />
-        </div>
+        </section>
+
+        <RightPanel
+          previewCommands={previewCommands}
+          previewCommandIndex={previewCommandIndex}
+          previewCaption={previewCaption}
+          previewState={previewState}
+          undoLen={undoLen}
+          redoLen={redoLen}
+          objectCount={objects.length}
+        />
       </main>
+
+      <BottomCommandBar
+        disabled={isBusy}
+        onSubmitCommand={handleSubmitCommand}
+        statusLabel={statusLabel}
+      />
     </div>
   )
 }
