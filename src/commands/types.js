@@ -18,8 +18,9 @@
  * @typedef {{ type:'rect',   id:string, x:number, y:number, w:number, h:number, fill?:string, stroke?:string, groupId?:string, groupLabel?:string, role?:string }} RectCmd
  * @typedef {{ type:'line',   id:string, x1:number, y1:number, x2:number, y2:number, stroke?:string, width?:number, groupId?:string, groupLabel?:string, role?:string }} LineCmd
  * @typedef {{ type:'text',   id:string, x:number, y:number, content:string, size?:number, fill?:string, groupId?:string, groupLabel?:string, role?:string }} TextCmd
+ * @typedef {{ translateX?:number, translateY?:number, scale?:number }} GroupTransform
  * @typedef {{ type:'clear' }} ClearCmd
- * @typedef {{ type:'update', id:string, props:Record<string,unknown> }} UpdateCmd
+ * @typedef {{ type:'update', id:string, scope?:'object'|'group', props?:Record<string,unknown>, transform?:GroupTransform }} UpdateCmd
  * @typedef {{ type:'delete', id:string, scope?:'object'|'group' }} DeleteCmd
  *
  * @typedef {CircleCmd|RectCmd|LineCmd|TextCmd|ClearCmd|UpdateCmd|DeleteCmd} DrawCommand
