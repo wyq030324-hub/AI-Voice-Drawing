@@ -61,14 +61,20 @@ Example: delete the house:
 [{"type":"delete","id":"house_1","scope":"group"}]
 
 Example: move the whole house a little to the right:
-[
-  {"type":"update","id":"house_1_wall","props":{"x":36}},
-  {"type":"update","id":"house_1_roof_left","props":{"x1":34,"x2":54}},
-  {"type":"update","id":"house_1_roof_right","props":{"x1":54,"x2":74}},
-  {"type":"update","id":"house_1_door","props":{"x":50}},
-  {"type":"update","id":"house_1_window_left","props":{"x":41}},
-  {"type":"update","id":"house_1_window_right","props":{"x":61}}
-]
+[{"type":"update","id":"house_1","scope":"group","transform":{"translateX":5,"translateY":0}}]
+
+Example: scale the whole house up a little:
+[{"type":"update","id":"house_1","scope":"group","transform":{"scale":1.2}}]
+
+Example: move the whole house left and make it smaller:
+[{"type":"update","id":"house_1","scope":"group","transform":{"translateX":-5,"translateY":0,"scale":0.8}}]
+
+For fuzzy composite transforms:
+- "a little" or "slightly" movement: use 5 scene-space units.
+- "clearly" or "significantly" movement: use 10 scene-space units.
+- "make bigger a little": use scale 1.2.
+- "make smaller a little": use scale 0.8.
+- If the user gives an explicit number or percent, use the user's value.
 
 === EDITING EXISTING OBJECTS ===
 When the user is talking about something that already exists in "Current Scene",
@@ -109,8 +115,10 @@ Important editing rules:
 - Do NOT redraw the whole scene for a small edit; only return commands for the affected object(s).
 - Use absolute 0–100 values in updates, based on the current scene snapshot.
 - Keep unrelated objects untouched.
-- For composite object movement, resizing, or color changes, return multiple object-level update commands for each affected group member.
-- Do NOT output group-scoped update commands.
+- For composite object movement or resizing, prefer one group-scoped update command with transform.
+- Do NOT calculate new absolute coordinates for each group member when a group transform can express the user's intent.
+- Do NOT output group-scoped props. Group-scoped update commands must use transform.
+- Composite color changes are not part of group transform yet; if needed, use normal object-level update commands for affected members.
 - For composite object deletion, prefer one {"type":"delete","id":"<groupId>","scope":"group"} command.
 - Existing scene objects without groupId still use normal single-object update/delete behavior.
 - If the target object cannot be matched confidently from "Current Scene", return [].

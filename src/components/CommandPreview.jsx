@@ -54,6 +54,8 @@ function describeCommand(cmd) {
 }
 
 function describeUpdate(cmd) {
+  if (cmd.scope === 'group') return describeGroupTransform(cmd)
+
   const props = cmd.props ?? {}
   const labels = []
 
@@ -68,4 +70,23 @@ function describeUpdate(cmd) {
 
 function hasAnyKey(obj, keys) {
   return keys.some((key) => Object.hasOwn(obj, key))
+}
+
+function describeGroupTransform(cmd) {
+  const transform = cmd.transform ?? {}
+  const hasTranslate = Object.hasOwn(transform, 'translateX') || Object.hasOwn(transform, 'translateY')
+  const hasScale = Object.hasOwn(transform, 'scale')
+  const parts = []
+
+  if (hasTranslate) {
+    parts.push(`dx=${transform.translateX ?? 0}`)
+    parts.push(`dy=${transform.translateY ?? 0}`)
+  }
+  if (hasScale) parts.push(`scale=${transform.scale}`)
+
+  const suffix = parts.length ? `：${parts.join('，')}` : ''
+  if (hasTranslate && hasScale) return `变换组合 "${cmd.id}"${suffix}`
+  if (hasTranslate) return `移动组合 "${cmd.id}"${suffix}`
+  if (hasScale) return `缩放组合 "${cmd.id}"${suffix}`
+  return `更新组合 "${cmd.id}"`
 }
