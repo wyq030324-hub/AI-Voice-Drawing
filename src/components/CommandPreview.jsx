@@ -3,7 +3,14 @@ const POSITION_KEYS = ['x', 'y', 'x1', 'y1', 'x2', 'y2']
 const SIZE_KEYS = ['r', 'w', 'h', 'size', 'width']
 
 export default function CommandPreview({ commands, currentIndex, caption, status = 'idle' }) {
-  if (!commands.length) return null
+  if (!commands.length) {
+    return (
+      <aside className="command-preview command-preview-empty">
+        <div className="preview-empty-title">等待解析结果</div>
+        <p>提交语音或文字指令后，这里会显示 AI 解析出的执行步骤。</p>
+      </aside>
+    )
+  }
 
   const isRunning = status === 'running'
   const isDone = status === 'done'
