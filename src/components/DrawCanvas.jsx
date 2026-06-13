@@ -1,13 +1,13 @@
 import { useRef, useEffect, useCallback } from 'react'
-import { executeCommands } from '../commands/executor'
+import { renderObjects } from '../commands/renderer'
 
 /**
- * DrawCanvas — a full-size <canvas> that replays `commands` on every change
+ * DrawCanvas — a full-size <canvas> that renders `objects` on every change
  * and automatically redraws when the element is resized.
  *
- * @param {{ commands: import('../commands/types').DrawCommand[] }} props
+ * @param {{ objects: import('../commands/types').SceneObject[] }} props
  */
-export default function DrawCanvas({ commands }) {
+export default function DrawCanvas({ objects }) {
   const canvasRef = useRef(null)
 
   const redraw = useCallback(() => {
@@ -15,12 +15,11 @@ export default function DrawCanvas({ commands }) {
     if (!canvas) return
     const { width, height } = canvas.getBoundingClientRect()
     if (!width || !height) return
-    // Assigning canvas.width resets the bitmap (clears it) even if the value is unchanged.
+    // Setting canvas.width clears the bitmap (even when value is unchanged).
     canvas.width  = width
     canvas.height = height
-    const ctx = canvas.getContext('2d')
-    executeCommands(ctx, commands, width, height)
-  }, [commands])
+    renderObjects(canvas.getContext('2d'), objects, width, height)
+  }, [objects])
 
   useEffect(() => {
     const canvas = canvasRef.current

@@ -1,85 +1,78 @@
 /**
- * executeCommands(ctx, commands, w, h)
+ * Pure scene mutation helpers — no canvas, no side effects.
  *
- * Replays a DrawCommand array onto a 2D canvas context.
- * Invalid or unknown commands are skipped with a console.warn — never throws.
+ * applyCommand(objects, cmd)  → SceneObject[]
+ * applyCommands(objects, cmds) → SceneObject[]
  *
- * @param {CanvasRenderingContext2D} ctx
- * @param {import('./types').DrawCommand[]} commands
- * @param {number} w  canvas pixel width
- * @param {number} h  canvas pixel height
+ * Rules:
+ *  - Returns a new array; never mutates the input.
+ *  - Invalid / unknown commands are skipped with console.warn.
+ *  - Shape commands with an existing id replace the old object in-place
+ *    (preserves draw order for objects the LLM keeps).
  */
-export function executeCommands(ctx, commands, w, h) {
-  if (!Array.isArray(commands)) return
 
-  const minDim = Math.min(w, h)
+/**
+ * @param {import('./types').SceneObject[]} objects
+ * @param {import('./types').DrawCommand} cmd
+ * @returns {import('./types').SceneObject[]}
+ */
+export function applyCommand(objects, cmd) {
+  try {
+    switch (cmd?.type) {
+      case 'clear':
+        return []
 
-  // Convert a 0-100 relative value to pixels along the given axis total.
-  const rx = (v) => (v / 100) * w
-  const ry = (v) => (v / 100) * h
-  const rm = (v) => (v / 100) * minDim  // relative to shorter side (for radii / font sizes)
-
-  const ok = (...vals) => vals.every((v) => typeof v === 'number' && isFinite(v))
-
-  for (const cmd of commands) {
-    try {
-      switch (cmd?.type) {
-        case 'clear':
-          ctx.clearRect(0, 0, w, h)
-          break
-
-        case 'circle': {
-          const { x, y, r, fill, stroke } = cmd
-          if (!ok(x, y, r)) { console.warn('[executor] circle: bad params', cmd); break }
-          ctx.beginPath()
-          ctx.arc(rx(x), ry(y), rm(r), 0, Math.PI * 2)
-          if (fill)   { ctx.fillStyle   = fill;   ctx.fill()   }
-          if (stroke) { ctx.strokeStyle = stroke; ctx.stroke() }
-          break
-        }
-
-        case 'rect': {
-          // Destructure cmd.w / cmd.h as cw / ch to avoid shadowing the w / h params.
-          const { x, y, w: cw, h: ch, fill, stroke } = cmd
-          if (!ok(x, y, cw, ch)) { console.warn('[executor] rect: bad params', cmd); break }
-          const X = rx(x), Y = ry(y), W = rx(cw), H = ry(ch)
-          if (fill)   { ctx.fillStyle   = fill;   ctx.fillRect(X, Y, W, H)   }
-          if (stroke) { ctx.strokeStyle = stroke; ctx.strokeRect(X, Y, W, H) }
-          break
-        }
-
-        case 'line': {
-          const { x1, y1, x2, y2, stroke, width } = cmd
-          if (!ok(x1, y1, x2, y2)) { console.warn('[executor] line: bad params', cmd); break }
-          ctx.beginPath()
-          ctx.moveTo(rx(x1), ry(y1))
-          ctx.lineTo(rx(x2), ry(y2))
-          ctx.strokeStyle = stroke || '#000'
-          ctx.lineWidth   = typeof width === 'number' && isFinite(width) ? width : 1
-          ctx.stroke()
-          break
-        }
-
-        case 'text': {
-          const { x, y, content, size, fill } = cmd
-          if (!ok(x, y) || typeof content !== 'string') {
-            console.warn('[executor] text: bad params', cmd)
-            break
-          }
-          const fs = ok(size) ? rm(size) : 16
-          ctx.font         = `${fs}px sans-serif`
-          ctx.fillStyle    = fill || '#000'
-          ctx.textAlign    = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(content, rx(x), ry(y))
-          break
-        }
-
-        default:
-          console.warn('[executor] unknown command type:', cmd?.type, cmd)
+      case 'delete': {
+        if (!cmd.id) { console.warn('[executor] delete: missing id', cmd); return objects }
+        return objects.filter((o) => o.id !== cmd.id)
       }
-    } catch (err) {
-      console.warn('[executor] runtime error on command:', cmd, err)
+
+      case 'update': {
+        if (!cmd.id || !cmd.props) {
+          console.warn('[executor] update: missing id or props', cmd)
+          return objects
+        }
+        const idx = objects.findIndex((o) => o.id === cmd.id)
+        if (idx < 0) {
+          console.warn('[executor] update: id not found:', cmd.id)
+          return objects
+        }
+        const next = [...objects]
+        next[idx] = { ...next[idx], ...cmd.props }
+        return next
+      }
+
+      case 'circle':
+      case 'rect':
+      case 'line':
+      case 'text': {
+        if (!cmd.id) { console.warn('[executor] shape: missing id', cmd); return objects }
+        const obj = { ...cmd }   // type + id + all shape props
+        const idx = objects.findIndex((o) => o.id === cmd.id)
+        if (idx >= 0) {
+          const next = [...objects]
+          next[idx] = obj
+          return next
+        }
+        return [...objects, obj]
+      }
+
+      default:
+        console.warn('[executor] unknown command type:', cmd?.type, cmd)
+        return objects
     }
+  } catch (err) {
+    console.warn('[executor] error applying command:', cmd, err)
+    return objects
   }
+}
+
+/**
+ * @param {import('./types').SceneObject[]} objects
+ * @param {import('./types').DrawCommand[]} commands
+ * @returns {import('./types').SceneObject[]}
+ */
+export function applyCommands(objects, commands) {
+  if (!Array.isArray(commands)) return objects
+  return commands.reduce(applyCommand, objects)
 }
