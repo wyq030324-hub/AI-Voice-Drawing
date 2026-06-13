@@ -1,3 +1,7 @@
+const COLOR_KEYS = ['fill', 'stroke']
+const POSITION_KEYS = ['x', 'y', 'x1', 'y1', 'x2', 'y2']
+const SIZE_KEYS = ['r', 'w', 'h', 'size', 'width']
+
 export default function CommandPreview({ commands, currentIndex, caption, status = 'idle' }) {
   if (!commands.length) return null
 
@@ -42,9 +46,26 @@ function describeCommand(cmd) {
     case 'rect':   return `绘制矩形 "${cmd.id}"`
     case 'line':   return `绘制线段 "${cmd.id}"`
     case 'text':   return `添加文字 "${cmd.content ?? cmd.id}"`
-    case 'update': return `更新 "${cmd.id}"`
+    case 'update': return describeUpdate(cmd)
     case 'delete': return `删除 "${cmd.id}"`
     case 'clear':  return '清空画布'
     default:       return `执行 ${cmd.type}`
   }
+}
+
+function describeUpdate(cmd) {
+  const props = cmd.props ?? {}
+  const labels = []
+
+  if (hasAnyKey(props, COLOR_KEYS)) labels.push('修改颜色')
+  if (hasAnyKey(props, POSITION_KEYS)) labels.push('移动')
+  if (hasAnyKey(props, SIZE_KEYS)) labels.push('调整大小')
+
+  if (labels.length === 0) return `更新 "${cmd.id}"`
+  if (labels.length === 1) return `${labels[0]} "${cmd.id}"`
+  return `编辑 "${cmd.id}"（${labels.join('、')}）`
+}
+
+function hasAnyKey(obj, keys) {
+  return keys.some((key) => Object.hasOwn(obj, key))
 }

@@ -37,8 +37,13 @@ export function applyCommand(objects, cmd) {
           console.warn('[executor] update: id not found:', cmd.id)
           return objects
         }
+        const { id: _ignoredId, type: _ignoredType, ...safeProps } = cmd.props
+        if (Object.keys(safeProps).length === 0) {
+          console.warn('[executor] update: no editable props', cmd)
+          return objects
+        }
         const next = [...objects]
-        next[idx] = { ...next[idx], ...cmd.props }
+        next[idx] = { ...next[idx], ...safeProps }
         return next
       }
 

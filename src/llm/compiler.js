@@ -33,6 +33,43 @@ Delete one object:
 Clear the entire canvas:
 {"type":"clear"}
 
+=== EDITING EXISTING OBJECTS ===
+When the user is talking about something that already exists in "Current Scene",
+prefer {"type":"update"} or {"type":"delete"} over creating a brand-new object.
+
+Use the current scene to resolve references like:
+  "the sun", "the roof", "the left tree", "the rightmost cloud", "the house"
+
+Allowed object-editing patterns:
+1. Change color → update fill / stroke only.
+   User: "make the sun orange"
+   Output: [{"type":"update","id":"sun","props":{"fill":"#FFA500","stroke":"#CC8400"}}]
+
+2. Move an object → update position fields only.
+   circle / text / rect: x, y
+   line: x1, y1, x2, y2
+   User: "move the house a little to the right"
+   Output: [{"type":"update","id":"house_wall","props":{"x":38}},{"type":"update","id":"house_roof","props":{"x1":33,"x2":56}}]
+
+3. Resize an object → update size fields only.
+   circle: r
+   rect: w, h (and y if needed to keep the bottom grounded)
+   text: size
+   line: width or endpoints when needed
+   User: "make the left tree taller"
+   Output: [{"type":"update","id":"tree_left_trunk","props":{"h":22,"y":50}}]
+
+4. Delete an object → use delete.
+   User: "delete the rightmost cloud"
+   Output: [{"type":"delete","id":"cloud_right"}]
+
+Important editing rules:
+- Do NOT invent new ids when the user clearly means an existing object.
+- Do NOT redraw the whole scene for a small edit; only return commands for the affected object(s).
+- Use absolute 0–100 values in updates, based on the current scene snapshot.
+- Keep unrelated objects untouched.
+- If the target object cannot be matched confidently from "Current Scene", return [].
+
 === NAMING RULES ===
 1. Every NEW object needs a short, lowercase, underscore_separated English id:
    sun, moon, house_wall, house_roof, tree_trunk, cloud_left, window_1
