@@ -1,23 +1,30 @@
 /**
- * Drawing command schema.
+ * Drawing command / scene mutation schema — PR#3+.
  *
- * All coordinates and dimensions use 0–100 relative units so the LLM
- * never needs to think about canvas pixels.  The executor converts them
- * at render time based on the actual canvas size.
+ * All coordinates and sizes use 0–100 relative units so the LLM never
+ * needs to think about canvas pixels.  The renderer converts at draw time.
  *
- * x, y        → fraction of canvas width / height
- * r           → fraction of min(width, height)
- * w, h (rect) → fraction of canvas width / height
- * size (text) → fraction of min(width, height)
- * width (line) → CSS pixels (stroke width rarely needs to scale)
+ *   x, y              → % of canvas width / height
+ *   r  (circle)       → % of min(width, height)
+ *   w, h  (rect)      → % of canvas width / height
+ *   size  (text)      → % of min(width, height)
+ *   x1,y1,x2,y2       → % of canvas width / height
+ *   width (line)      → CSS pixel integer
  *
- * @typedef {{ type: 'circle', x: number, y: number, r: number, fill?: string, stroke?: string }} CircleCmd
- * @typedef {{ type: 'rect',   x: number, y: number, w: number, h: number, fill?: string, stroke?: string }} RectCmd
- * @typedef {{ type: 'line',   x1: number, y1: number, x2: number, y2: number, stroke?: string, width?: number }} LineCmd
- * @typedef {{ type: 'text',   x: number, y: number, content: string, size?: number, fill?: string }} TextCmd
- * @typedef {{ type: 'clear' }} ClearCmd
- * @typedef {CircleCmd | RectCmd | LineCmd | TextCmd | ClearCmd} DrawCommand
+ * Every shape carries a unique string `id`.
+ * The LLM is instructed to use short, semantic English ids (sun, house_wall…).
+ *
+ * @typedef {{ type:'circle', id:string, x:number, y:number, r:number, fill?:string, stroke?:string }} CircleCmd
+ * @typedef {{ type:'rect',   id:string, x:number, y:number, w:number, h:number,  fill?:string, stroke?:string }} RectCmd
+ * @typedef {{ type:'line',   id:string, x1:number, y1:number, x2:number, y2:number, stroke?:string, width?:number }} LineCmd
+ * @typedef {{ type:'text',   id:string, x:number, y:number, content:string, size?:number, fill?:string }} TextCmd
+ * @typedef {{ type:'clear' }} ClearCmd
+ * @typedef {{ type:'update', id:string, props:Record<string,unknown> }} UpdateCmd
+ * @typedef {{ type:'delete', id:string }} DeleteCmd
+ *
+ * @typedef {CircleCmd|RectCmd|LineCmd|TextCmd|ClearCmd|UpdateCmd|DeleteCmd} DrawCommand
+ * @typedef {CircleCmd|RectCmd|LineCmd|TextCmd} SceneObject  — what lives in App state
  */
 
-/** All recognised command type strings. */
-export const COMMAND_TYPES = Object.freeze(['circle', 'rect', 'line', 'text', 'clear'])
+export const COMMAND_TYPES = Object.freeze(['circle','rect','line','text','clear','update','delete'])
+export const SHAPE_TYPES   = Object.freeze(['circle','rect','line','text'])

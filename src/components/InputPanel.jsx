@@ -19,7 +19,7 @@ function extractTrigger(text) {
   return null
 }
 
-export default function InputPanel({ onSubmitCommand }) {
+export default function InputPanel({ onSubmitCommand, disabled = false }) {
   const { isSupported, isListening, interimText, finalText, error, start, stop, clearTranscript } =
     useSpeechRecognition()
   const textRef = useRef(null)
@@ -31,6 +31,11 @@ export default function InputPanel({ onSubmitCommand }) {
   useEffect(() => {
     if (speechUnavailable) textRef.current?.focus()
   }, [speechUnavailable])
+
+  // Stop active voice recognition while parent is busy (LLM / drawing in progress)
+  useEffect(() => {
+    if (disabled && isListening) stop()
+  }, [disabled, isListening, stop])
 
   // Auto-submit when a trigger word appears in the accumulated final transcript
   useEffect(() => {
@@ -50,13 +55,13 @@ export default function InputPanel({ onSubmitCommand }) {
   }, [finalText, clearTranscript, onSubmitCommand])
 
   const handleTextKey = useCallback((e) => {
-    if (e.key !== 'Enter' || e.shiftKey) return
+    if (disabled || e.key !== 'Enter' || e.shiftKey) return
     e.preventDefault()
     const text = e.currentTarget.value.trim()
     if (!text) return
     onSubmitCommand(text)
     e.currentTarget.value = ''
-  }, [onSubmitCommand])
+  }, [disabled, onSubmitCommand])
 
   return (
     <div className={styles.panel}>
@@ -67,13 +72,14 @@ export default function InputPanel({ onSubmitCommand }) {
             <button
               className={isListening ? styles.btnStop : styles.btnStart}
               onClick={isListening ? stop : start}
+              disabled={disabled && !isListening}
             >
               {isListening ? '⏹ 停止' : '🎤 开始识别'}
             </button>
 
             {/* Submit appears after the user stops and there is confirmed final text */}
             {finalText.trim() && !isListening && (
-              <button className={styles.btnSubmit} onClick={handleVoiceSubmit}>
+              <button className={styles.btnSubmit} onClick={handleVoiceSubmit} disabled={disabled}>
                 提交
               </button>
             )}
