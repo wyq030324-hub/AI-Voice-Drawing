@@ -47,7 +47,7 @@ function describeCommand(cmd) {
     case 'line':   return `绘制线段 "${cmd.id}"`
     case 'text':   return `添加文字 "${cmd.content ?? cmd.id}"`
     case 'update': return describeUpdate(cmd)
-    case 'delete': return `删除 "${cmd.id}"`
+    case 'delete': return cmd.scope === 'group' ? `删除组合 "${cmd.id}"` : `删除 "${cmd.id}"`
     case 'clear':  return '清空画布'
     default:       return `执行 ${cmd.type}`
   }

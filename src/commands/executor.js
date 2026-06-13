@@ -24,6 +24,14 @@ export function applyCommand(objects, cmd) {
 
       case 'delete': {
         if (!cmd.id) { console.warn('[executor] delete: missing id', cmd); return objects }
+        if (cmd.scope === 'group') {
+          const next = objects.filter((o) => o.groupId !== cmd.id)
+          if (next.length === objects.length) {
+            console.warn('[executor] delete group: groupId not found:', cmd.id)
+            return objects
+          }
+          return next
+        }
         return objects.filter((o) => o.id !== cmd.id)
       }
 

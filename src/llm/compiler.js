@@ -33,6 +33,43 @@ Delete one object:
 Clear the entire canvas:
 {"type":"clear"}
 
+=== COMPOSITE OBJECTS ===
+Simple objects can stay as one shape. Composite objects such as houses, trees,
+cloud clusters, people, cars, or other multi-part scene elements should be
+decomposed into multiple independent shapes that share lightweight group metadata.
+
+Each part of a composite object must still have its own stable semantic id.
+All parts in the same composite object must share:
+  groupId     → unique machine id, e.g. house_1, tree_1, cloud_2
+  groupLabel  → semantic label only, e.g. house, tree, cloud
+  role        → part name, e.g. wall, roof, door, window_left, window_right
+
+Do not use parentId. Do not create nested groups. groupLabel is not unique;
+use groupId for exact targeting.
+
+Example: draw a house with a red roof, one door, and two windows:
+[
+  {"type":"rect","id":"house_1_wall","groupId":"house_1","groupLabel":"house","role":"wall","x":30,"y":50,"w":36,"h":28,"fill":"#D9A066","stroke":"#8B5A2B"},
+  {"type":"line","id":"house_1_roof_left","groupId":"house_1","groupLabel":"house","role":"roof_left","x1":28,"y1":50,"x2":48,"y2":34,"stroke":"#C92A2A","width":4},
+  {"type":"line","id":"house_1_roof_right","groupId":"house_1","groupLabel":"house","role":"roof_right","x1":48,"y1":34,"x2":68,"y2":50,"stroke":"#C92A2A","width":4},
+  {"type":"rect","id":"house_1_door","groupId":"house_1","groupLabel":"house","role":"door","x":44,"y":62,"w":8,"h":16,"fill":"#6B3F1D","stroke":"#3B2412"},
+  {"type":"rect","id":"house_1_window_left","groupId":"house_1","groupLabel":"house","role":"window_left","x":35,"y":56,"w":7,"h":7,"fill":"#A5D8FF","stroke":"#1C7ED6"},
+  {"type":"rect","id":"house_1_window_right","groupId":"house_1","groupLabel":"house","role":"window_right","x":55,"y":56,"w":7,"h":7,"fill":"#A5D8FF","stroke":"#1C7ED6"}
+]
+
+Example: delete the house:
+[{"type":"delete","id":"house_1","scope":"group"}]
+
+Example: move the whole house a little to the right:
+[
+  {"type":"update","id":"house_1_wall","props":{"x":36}},
+  {"type":"update","id":"house_1_roof_left","props":{"x1":34,"x2":54}},
+  {"type":"update","id":"house_1_roof_right","props":{"x1":54,"x2":74}},
+  {"type":"update","id":"house_1_door","props":{"x":50}},
+  {"type":"update","id":"house_1_window_left","props":{"x":41}},
+  {"type":"update","id":"house_1_window_right","props":{"x":61}}
+]
+
 === EDITING EXISTING OBJECTS ===
 When the user is talking about something that already exists in "Current Scene",
 prefer {"type":"update"} or {"type":"delete"} over creating a brand-new object.
@@ -63,11 +100,19 @@ Allowed object-editing patterns:
    User: "delete the rightmost cloud"
    Output: [{"type":"delete","id":"cloud_right"}]
 
+5. Delete a composite object → use one group-scoped delete with the exact groupId.
+   User: "delete the house"
+   Output: [{"type":"delete","id":"house_1","scope":"group"}]
+
 Important editing rules:
 - Do NOT invent new ids when the user clearly means an existing object.
 - Do NOT redraw the whole scene for a small edit; only return commands for the affected object(s).
 - Use absolute 0–100 values in updates, based on the current scene snapshot.
 - Keep unrelated objects untouched.
+- For composite object movement, resizing, or color changes, return multiple object-level update commands for each affected group member.
+- Do NOT output group-scoped update commands.
+- For composite object deletion, prefer one {"type":"delete","id":"<groupId>","scope":"group"} command.
+- Existing scene objects without groupId still use normal single-object update/delete behavior.
 - If the target object cannot be matched confidently from "Current Scene", return [].
 
 === NAMING RULES ===
