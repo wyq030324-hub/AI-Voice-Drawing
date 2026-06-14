@@ -181,6 +181,11 @@ export function findMatchingObjects(term, objects) {
   }
 
   const tokens = new Set(targetSpec.tokens.map(normalize))
+  const exactMatches = objects.filter((object) => (
+    [...tokens].some((token) => objectHasExactToken(object, token))
+  ))
+  if (exactMatches.length) return exactMatches
+
   const scored = []
 
   for (const object of objects) {
@@ -191,6 +196,13 @@ export function findMatchingObjects(term, objects) {
   if (!scored.length) return []
   const bestScore = Math.max(...scored.map((item) => item.score))
   return scored.filter((item) => item.score === bestScore).map((item) => item.object)
+}
+
+function objectHasExactToken(object, token) {
+  if (!token) return false
+  return [object?.id, object?.groupLabel, object?.role, object?.type, object?.groupId]
+    .map(normalize)
+    .some((value) => value === token)
 }
 
 function buildTargetSpec(term) {

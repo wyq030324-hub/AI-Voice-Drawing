@@ -4,34 +4,24 @@ import EditorTopBar from './components/EditorTopBar'
 import ToolRail from './components/ToolRail'
 import RightPanel from './components/RightPanel'
 import BottomCommandBar from './components/BottomCommandBar'
+import HomePage from './components/HomePage'
 import { applyCommand } from './commands/executor'
 import { compile } from './llm/compiler'
 import { downloadTextFile, sceneToSvg } from './utils/exportScene'
 import { parseVoiceUiCommand } from './utils/voiceUiCommands'
 import './App.css'
 
-/** Hard-coded demo commands for the "测试绘制" button — no LLM call. */
+/** Hard-coded demo commands for the "测试绘制" button; no LLM call. */
 const DEMO_COMMANDS = [
   { type: 'rect',   id: 'demo_rect',   x: 10, y: 10, w: 28, h: 18, fill: '#ffa94d', stroke: '#e67700' },
   { type: 'circle', id: 'demo_circle', x: 70, y: 35, r: 12, fill: '#74c0fc', stroke: '#1971c2' },
   { type: 'line',   id: 'demo_line',   x1: 5, y1: 68, x2: 95, y2: 68, stroke: '#2f9e44', width: 2 },
-  { type: 'text',   id: 'demo_text',   x: 50, y: 82, content: 'PR#3 LLM 接入', size: 4, fill: '#e03131' },
+  { type: 'text',   id: 'demo_text',   x: 50, y: 82, content: 'AI 语音绘图', size: 4, fill: '#e03131' },
 ]
 
 const STEP_DELAY_MS = 300
 const EXPORT_PNG_NAME = 'ai-voice-drawing.png'
 const EXPORT_SVG_NAME = 'ai-voice-drawing.svg'
-const EXAMPLE_PROMPTS = [
-  '画一座带红色屋顶、两扇窗户和一扇门的小房子',
-  '把房子整体向右移动 5 个单位',
-  '查看房子门的属性',
-  '把门改成深棕色，透明度设为 0.85',
-  '画一个绿色太阳',
-  '在绿色太阳中间加一个五角星',
-  '生成五星红旗',
-  '打开属性',
-  '打开图层',
-]
 
 // Exact-match regexes for local history commands — avoids false positives
 // e.g. "把颜色恢复为红色" should go to LLM, but "恢复" alone triggers redo
@@ -40,6 +30,7 @@ const REDO_RE  = /^(重做|恢复)$/
 const CLEAR_RE = /^(清空|全部清空|清空画布)$/
 
 export default function App() {
+  const [view,                setView]                = useState('home')
   const [objects,             setObjects]             = useState([])
   const [drawingStatus,       setDrawingStatus]       = useState(null)
   const [llmLoading,          setLlmLoading]          = useState(false)
@@ -72,7 +63,7 @@ export default function App() {
     }
   }, [objects, selectedObjectId])
 
-  // ── Save current scene as undo snapshot, clear redo ──
+  // Save current scene as one undo snapshot and clear redo.
   const pushSnapshot = useCallback(() => {
     undoStackRef.current.push(JSON.parse(JSON.stringify(objectsRef.current)))
     redoStackRef.current = []
@@ -80,7 +71,6 @@ export default function App() {
     setRedoLen(0)
   }, [])
 
-  // ── Undo / Redo ──
   const handleUndo = useCallback(() => {
     if (busyRef.current || undoStackRef.current.length === 0) return
     const snapshot = undoStackRef.current.pop()
@@ -101,9 +91,8 @@ export default function App() {
     setRedoLen(redoStackRef.current.length)
   }, [])
 
-  // ── Apply commands one-by-one with animated delay ──
-  // Each step updates objectsRef directly so the next applyCommand sees the latest scene.
-  // Snapshot is NOT taken here — caller does one pushSnapshot() before invoking runCommands().
+  // Apply commands one by one with animated delay.
+  // Each step updates objectsRef directly so the next command sees the latest scene.
   const runCommands = useCallback(async (commands) => {
     setPreviewState('running')
     for (let i = 0; i < commands.length; i++) {
@@ -119,7 +108,6 @@ export default function App() {
     setPreviewState('done')
   }, [])
 
-  // ── Clear canvas (undo-aware) ──
   const handleClearCanvas = useCallback(() => {
     if (busyRef.current || objectsRef.current.length === 0) return
     pushSnapshot()
@@ -183,11 +171,6 @@ export default function App() {
     }
   }, [])
 
-  const handlePickExample = useCallback((example) => {
-    setDraftCommand(example)
-    setUiNotice('示例指令已填入输入框')
-  }, [])
-
   const applyDirectObjectUpdate = useCallback((id, props) => {
     if (busyRef.current || !id || !props || typeof props !== 'object') return false
 
@@ -221,7 +204,6 @@ export default function App() {
     return true
   }, [pushSnapshot])
 
-  // ── Main entry point: called by InputPanel on voice trigger / Enter ──
   const handleSubmitCommand = useCallback(async (text) => {
     if (busyRef.current) return
 
@@ -237,7 +219,7 @@ export default function App() {
       return
     }
 
-    // Local history commands — zero latency, no LLM
+    // Local history commands: zero latency, no LLM.
     if (UNDO_RE.test(trimmed))  { handleUndo();        return }
     if (REDO_RE.test(trimmed))  { handleRedo();        return }
     if (CLEAR_RE.test(trimmed)) { handleClearCanvas(); return }
@@ -259,7 +241,7 @@ export default function App() {
       }
 
       if (commands.length) {
-        // One snapshot for the entire submission — not per-command
+        // One snapshot for the entire submission, not per command.
         pushSnapshot()
         setPreviewCommands(commands)
         setPreviewCaption(text)
@@ -272,7 +254,6 @@ export default function App() {
     }
   }, [runCommands, handleUndo, handleRedo, handleClearCanvas, pushSnapshot])
 
-  // ── Demo button: animate DEMO_COMMANDS without LLM ──
   const handleDemo = useCallback(() => {
     if (busyRef.current) return
     busyRef.current = true
@@ -299,6 +280,10 @@ export default function App() {
           ? '全部完成'
           : '等待指令'
 
+  if (view === 'home') {
+    return <HomePage onStart={() => setView('editor')} />
+  }
+
   return (
     <div className="app editor-app">
       <EditorTopBar
@@ -310,6 +295,7 @@ export default function App() {
         onClear={handleClearCanvas}
         onExportPng={handleExportPng}
         onExportSvg={handleExportSvg}
+        onHome={() => setView('home')}
       />
 
       <main className="editor-main">
@@ -329,8 +315,14 @@ export default function App() {
           <div className="canvas-shell">
             {objects.length === 0 && !isBusy && (
               <div className="canvas-empty-state">
-                <strong>从一句话开始绘画</strong>
-                <span>在底部输入或说出你的创作想法，AI 会逐步生成可编辑对象。你也可以点示例指令快速开始。</span>
+                <span className="empty-kicker">对象级画布</span>
+                <strong>说出画面，继续编辑每个对象</strong>
+                <span>试试：“画一座带红色屋顶的小房子”</span>
+                <div className="canvas-empty-prompts" aria-hidden="true">
+                  <span>生成五星红旗</span>
+                  <span>查看房子门的属性</span>
+                  <span>导出 SVG</span>
+                </div>
               </div>
             )}
             <div className="canvas-wrap">
@@ -367,8 +359,6 @@ export default function App() {
         onNotice={setUiNotice}
         draftValue={draftCommand}
         onDraftChange={setDraftCommand}
-        examples={EXAMPLE_PROMPTS}
-        onPickExample={handlePickExample}
       />
     </div>
   )

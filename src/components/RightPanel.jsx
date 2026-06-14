@@ -3,10 +3,10 @@ import CommandPreview from './CommandPreview'
 import PropertyPanel from './PropertyPanel'
 
 const TABS = [
-  { id: 'preview', label: '指令预览' },
   { id: 'properties', label: '属性' },
   { id: 'layers', label: '图层' },
-  { id: 'history', label: '历史记录' },
+  { id: 'preview', label: '指令' },
+  { id: 'history', label: '历史' },
 ]
 
 export default function RightPanel({
@@ -75,7 +75,7 @@ export default function RightPanel({
 
         {activeTab === 'history' && (
           <div className="history-panel">
-            <h2>历史记录</h2>
+            <h2>历史</h2>
             <p>历史栈仍按一次用户输入保存快照。</p>
             <dl>
               <div>

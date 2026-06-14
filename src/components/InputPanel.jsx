@@ -174,7 +174,7 @@ export default function InputPanel({
               onClick={handleVoiceToggle}
               disabled={disabled && !isListening}
             >
-              {isListening ? '⏹ 停止' : '🎤 开始识别'}
+              {isListening ? '停止识别' : '开始识别'}
             </button>
 
             {/* Submit appears after the user stops and there is confirmed final text */}

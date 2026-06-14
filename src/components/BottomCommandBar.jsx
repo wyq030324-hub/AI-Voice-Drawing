@@ -7,8 +7,6 @@ export default function BottomCommandBar({
   onNotice,
   draftValue,
   onDraftChange,
-  examples = [],
-  onPickExample,
 }) {
   return (
     <footer className="bottom-command-bar">
@@ -17,25 +15,6 @@ export default function BottomCommandBar({
         {statusLabel}
       </div>
       <div className="command-entry">
-        {examples.length > 0 && (
-          <div className="command-examples" aria-label="示例指令">
-            <span className="examples-label">示例指令</span>
-            <div className="example-chip-list">
-              {examples.map((example) => (
-                <button
-                  key={example}
-                  type="button"
-                  className="example-chip"
-                  onClick={() => onPickExample?.(example)}
-                  disabled={disabled}
-                >
-                  {example}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <InputPanel
           onSubmitCommand={onSubmitCommand}
           disabled={disabled}

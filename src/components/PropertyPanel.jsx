@@ -123,7 +123,7 @@ export default function PropertyPanel({ object, disabled = false, onApply }) {
   return (
     <form className={styles.panel} onSubmit={handleSubmit}>
       <section className={styles.identity}>
-        <h2>属性</h2>
+        <h2>基础信息</h2>
         <ReadOnlyRow label="对象 ID" value={object.id} />
         <ReadOnlyRow label="类型" value={TYPE_LABELS[object.type] ?? object.type} />
         {object.groupId && <ReadOnlyRow label="组合 ID" value={object.groupId} />}
@@ -131,17 +131,22 @@ export default function PropertyPanel({ object, disabled = false, onApply }) {
         {object.role && <ReadOnlyRow label="部件角色" value={ROLE_LABELS[object.role] ?? object.role} />}
       </section>
 
-      <section className={styles.fields}>
-        {fields.map((field) => (
-          <PropertyField
-            key={field.key}
-            field={field}
-            value={draft[field.key] ?? ''}
-            disabled={disabled}
-            onChange={handleChange}
-          />
-        ))}
-      </section>
+      {groupFields(fields).map((group) => (
+        <section className={styles.fieldGroup} key={group.title}>
+          <h3>{group.title}</h3>
+          <div className={styles.fields}>
+            {group.fields.map((field) => (
+              <PropertyField
+                key={field.key}
+                field={field}
+                value={draft[field.key] ?? ''}
+                disabled={disabled}
+                onChange={handleChange}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
 
       {error && <p className={styles.error}>{error}</p>}
 
@@ -258,6 +263,21 @@ function ReadOnlyRow({ label, value }) {
       <strong>{value}</strong>
     </div>
   )
+}
+
+function groupFields(fields) {
+  const groups = [
+    { title: '位置与尺寸', keys: ['x', 'y', 'x1', 'y1', 'x2', 'y2', 'r', 'w', 'h', 'size', 'content'] },
+    { title: '外观颜色', keys: ['fill'] },
+    { title: '描边与透明度', keys: ['stroke', 'strokeWidth', 'width', 'opacity'] },
+  ]
+
+  return groups
+    .map((group) => ({
+      title: group.title,
+      fields: fields.filter((field) => group.keys.includes(field.key)),
+    }))
+    .filter((group) => group.fields.length > 0)
 }
 
 function buildDraft(object, fields) {

@@ -73,18 +73,21 @@ function drawCoordinateGrid(ctx, width, height) {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  for (let value = 0; value <= 100; value += 10) {
+  for (let value = 0; value <= 100; value += 5) {
     const x = rx(value)
     const y = ry(value)
     const isCenter = value === 50
     const isEdge = value === 0 || value === 100
+    const isMajor = value % 10 === 0
 
     ctx.beginPath()
     ctx.strokeStyle = isCenter
-      ? 'rgba(14, 165, 233, 0.26)'
+      ? 'rgba(201, 169, 110, 0.18)'
       : isEdge
-        ? 'rgba(15, 23, 42, 0.20)'
-        : 'rgba(15, 23, 42, 0.08)'
+        ? 'rgba(46, 39, 32, 0.13)'
+        : isMajor
+          ? 'rgba(46, 39, 32, 0.052)'
+          : 'rgba(46, 39, 32, 0.024)'
     ctx.lineWidth = isCenter ? 1.2 : 1
     ctx.moveTo(x, 0)
     ctx.lineTo(x, height)
@@ -93,10 +96,10 @@ function drawCoordinateGrid(ctx, width, height) {
     ctx.stroke()
   }
 
-  ctx.strokeStyle = 'rgba(15, 23, 42, 0.24)'
+  ctx.strokeStyle = 'rgba(46, 39, 32, 0.17)'
   ctx.strokeRect(0.5, 0.5, width - 1, height - 1)
 
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.45)'
+  ctx.fillStyle = 'rgba(46, 39, 32, 0.34)'
   for (const value of [0, 50, 100]) {
     const x = rx(value)
     const y = ry(value)
@@ -124,8 +127,8 @@ function renderSelection(ctx, obj, width, height) {
   ctx.save()
   ctx.setLineDash([6, 4])
   ctx.lineWidth = 1.5
-  ctx.strokeStyle = '#38bdf8'
-  ctx.fillStyle = 'rgba(56, 189, 248, 0.08)'
+  ctx.strokeStyle = '#c9a96e'
+  ctx.fillStyle = 'rgba(201, 169, 110, 0.08)'
   ctx.fillRect(x, y, w, h)
   ctx.strokeRect(x, y, w, h)
   ctx.restore()
