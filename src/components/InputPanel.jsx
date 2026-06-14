@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { parseLongVoiceTranscript } from '../utils/voiceUiCommands'
 import styles from './InputPanel.module.css'
 
 // Spoken words that trigger automatic submission.
@@ -19,10 +20,12 @@ function extractTrigger(text) {
   return null
 }
 
-export default function InputPanel({ onSubmitCommand, disabled = false }) {
+export default function InputPanel({ onSubmitCommand, disabled = false, onNotice }) {
   const { isSupported, isListening, interimText, finalText, error, start, stop, clearTranscript } =
     useSpeechRecognition()
   const textRef = useRef(null)
+  const [voiceMode, setVoiceMode] = useState('instant')
+  const isLongMode = voiceMode === 'long'
 
   // Speech is unavailable when the API is missing OR the user denied mic access
   const speechUnavailable = !isSupported || error === 'permission-denied'
@@ -34,18 +37,78 @@ export default function InputPanel({ onSubmitCommand, disabled = false }) {
 
   // Stop active voice recognition while parent is busy (LLM / drawing in progress)
   useEffect(() => {
-    if (disabled && isListening) stop()
-  }, [disabled, isListening, stop])
+    if (disabled && isListening && !isLongMode) stop()
+  }, [disabled, isListening, isLongMode, stop])
+
+  // Long voice mode should keep listening until the user explicitly ends it.
+  useEffect(() => {
+    if (!isLongMode || disabled || isListening || speechUnavailable) return
+    start()
+  }, [isLongMode, disabled, isListening, speechUnavailable, start])
 
   // Auto-submit when a trigger word appears in the accumulated final transcript
   useEffect(() => {
     if (!finalText) return
+    if (isLongMode) {
+      const result = parseLongVoiceTranscript(finalText)
+      if (result.action === 'wait') {
+        onNotice?.('正在记录长指令')
+        return
+      }
+      if (result.action === 'stop') {
+        clearTranscript()
+        setVoiceMode('instant')
+        stop()
+        onNotice?.('长语音已结束')
+        return
+      }
+      if (!result.command) {
+        clearTranscript()
+        onNotice?.('长语音草稿为空，请先说出指令内容')
+        return
+      }
+      if (disabled) {
+        onNotice?.('当前正在执行，暂不能提交长语音指令')
+        return
+      }
+      onSubmitCommand(result.command)
+      clearTranscript()
+      onNotice?.('已提交长语音指令，继续监听')
+      return
+    }
+
     const cleaned = extractTrigger(finalText)
     if (cleaned === null) return  // no trigger found
     stop()
     clearTranscript()
     if (cleaned) onSubmitCommand(cleaned)  // skip empty-string submit (trigger-word-only utterance)
-  }, [finalText, stop, clearTranscript, onSubmitCommand])
+  }, [finalText, isLongMode, disabled, stop, clearTranscript, onSubmitCommand, onNotice])
+
+  const switchToInstantMode = useCallback(() => {
+    setVoiceMode('instant')
+    clearTranscript()
+    if (isListening) stop()
+    onNotice?.('已切换到即时模式')
+  }, [clearTranscript, isListening, stop, onNotice])
+
+  const switchToLongMode = useCallback(() => {
+    setVoiceMode('long')
+    clearTranscript()
+    onNotice?.('长语音记录中')
+    if (!isListening && !disabled) start()
+  }, [clearTranscript, disabled, isListening, start, onNotice])
+
+  const handleVoiceToggle = useCallback(() => {
+    if (isListening) {
+      if (isLongMode) {
+        switchToInstantMode()
+        return
+      }
+      stop()
+      return
+    }
+    start()
+  }, [isListening, isLongMode, start, stop, switchToInstantMode])
 
   const handleVoiceSubmit = useCallback(() => {
     const text = finalText.trim()
@@ -78,17 +141,36 @@ export default function InputPanel({ onSubmitCommand, disabled = false }) {
       {/* ── Voice section (only rendered when the API exists) ── */}
       {isSupported && (
         <section className={styles.voiceSection}>
+          <div className={styles.modeSwitch} role="group" aria-label="语音输入模式">
+            <button
+              type="button"
+              className={`${styles.modeButton}${!isLongMode ? ` ${styles.modeButtonActive}` : ''}`}
+              onClick={switchToInstantMode}
+              disabled={disabled && !isLongMode}
+            >
+              即时
+            </button>
+            <button
+              type="button"
+              className={`${styles.modeButton}${isLongMode ? ` ${styles.modeButtonActive}` : ''}`}
+              onClick={switchToLongMode}
+              disabled={disabled}
+            >
+              长语音
+            </button>
+          </div>
+
           <div className={styles.controls}>
             <button
               className={isListening ? styles.btnStop : styles.btnStart}
-              onClick={isListening ? stop : start}
+              onClick={handleVoiceToggle}
               disabled={disabled && !isListening}
             >
               {isListening ? '⏹ 停止' : '🎤 开始识别'}
             </button>
 
             {/* Submit appears after the user stops and there is confirmed final text */}
-            {finalText.trim() && !isListening && (
+            {finalText.trim() && !isListening && !isLongMode && (
               <button className={styles.btnSubmit} onClick={handleVoiceSubmit} disabled={disabled}>
                 提交
               </button>
@@ -101,6 +183,12 @@ export default function InputPanel({ onSubmitCommand, disabled = false }) {
               {finalText && <span className={styles.final}>{finalText}</span>}
               {/* Interim results: light + italic to signal "still processing" */}
               {interimText && <span className={styles.interim}>{interimText}</span>}
+            </p>
+          )}
+
+          {isLongMode && (
+            <p className={styles.modeHint}>
+              正在记录长指令，说“好了 / ok / 执行 / 生成吧”提交，说“彻底结束”停止。
             </p>
           )}
         </section>

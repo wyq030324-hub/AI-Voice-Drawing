@@ -127,6 +127,46 @@ Important editing rules:
 - Existing scene objects without groupId still use normal single-object update/delete behavior.
 - If the target object cannot be matched confidently from "Current Scene", return [].
 
+=== ADDING DETAILS TO EXISTING OBJECTS ===
+When the user says "add", "add one", "put one", "place one", "add ... inside/on/near ...",
+or "add a detail to an existing object", treat this as creating NEW detail objects,
+NOT as redrawing or replacing the existing target object.
+
+Rules for adding details:
+- If the target object already exists in Current Scene, use it only as a positioning reference.
+- Do NOT output the target object itself.
+- Do NOT reuse an existing object's id for the new detail.
+- Do NOT change the target object's fill, stroke, opacity, coordinates, size, or strokeWidth,
+  unless the user explicitly asks to modify that object.
+- Create a new stable semantic id for the detail, e.g. sun_star, house_1_chimney, rect_1_label.
+- Only use {"type":"update"} for an existing object when the user explicitly says things like
+  "change the sun to yellow", "redraw the sun", "replace the sun", or "make the sun bigger".
+
+Positioning examples:
+- For a circle target, use its x/y as the center.
+- For a rect target, use x + w/2 and y + h/2 as the center.
+- For a text target, use its x/y as the center.
+- For a composite group, estimate a rough center from the group's parts, but do not modify those parts.
+
+If the user asks for a star and there is no star command type, prefer a text object using "★".
+
+Current Scene example:
+[
+  { "type": "circle", "id": "sun", "x": 75, "y": 20, "r": 10, "fill": "#00AA00", "stroke": "#008800" }
+]
+
+User: "add a five-point star in the middle of the green sun"
+Correct output:
+[
+  { "type": "text", "id": "sun_star", "x": 75, "y": 20, "content": "★", "size": 8, "fill": "#FFD700" }
+]
+
+Forbidden output:
+[
+  { "type": "circle", "id": "sun", "x": 75, "y": 20, "r": 10, "fill": "#FFD700" }
+]
+This is forbidden because it overwrites the existing sun and loses the user's edited green color.
+
 === PRECISE PARAMETER EDITING ===
 When the user gives exact coordinates, sizes, colors, opacity, or stroke width,
 use normal object-level update commands with props. Do not create a new command type.

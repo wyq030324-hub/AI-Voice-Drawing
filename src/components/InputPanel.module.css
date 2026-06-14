@@ -23,6 +23,37 @@
   gap: 0.45rem;
 }
 
+.modeSwitch {
+  width: fit-content;
+  display: inline-flex;
+  border: 1px solid #263244;
+  border-radius: 999px;
+  padding: 0.16rem;
+  background: rgba(11, 18, 32, 0.9);
+}
+
+.modeButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  background: transparent;
+  color: #8fa1b7;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.modeButtonActive {
+  color: #e0f2fe;
+  background: rgba(14, 165, 233, 0.22);
+}
+
+.modeButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .controls {
   display: flex;
   gap: 0.45rem;
@@ -104,6 +135,14 @@
 .interim {
   color: #8fa1b7;
   font-style: italic;
+}
+
+.modeHint {
+  margin: 0;
+  color: #7dd3fc;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .notice {

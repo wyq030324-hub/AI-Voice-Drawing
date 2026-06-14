@@ -6,6 +6,7 @@ import RightPanel from './components/RightPanel'
 import BottomCommandBar from './components/BottomCommandBar'
 import { applyCommand } from './commands/executor'
 import { compile } from './llm/compiler'
+import { parseVoiceUiCommand } from './utils/voiceUiCommands'
 import './App.css'
 
 /** Hard-coded demo commands for the "测试绘制" button — no LLM call. */
@@ -35,6 +36,8 @@ export default function App() {
   const [previewCaption,      setPreviewCaption]      = useState('')
   const [previewState,        setPreviewState]        = useState('idle')
   const [selectedObjectId,    setSelectedObjectId]    = useState(null)
+  const [rightPanelTab,       setRightPanelTab]       = useState('preview')
+  const [uiNotice,            setUiNotice]            = useState('')
   // Only lengths are state; actual stacks live in refs to avoid stale-closure issues
   const [undoLen, setUndoLen] = useState(0)
   const [redoLen, setRedoLen] = useState(0)
@@ -140,6 +143,7 @@ export default function App() {
     objectsRef.current = next
     setObjects(next)
     setErrorMsg('')
+    setUiNotice('已应用属性修改')
     return true
   }, [pushSnapshot])
 
@@ -149,6 +153,16 @@ export default function App() {
 
     const trimmed = text.trim()
 
+    const uiCommand = parseVoiceUiCommand(trimmed, objectsRef.current)
+    if (uiCommand.handled) {
+      setErrorMsg('')
+      setStatusText('')
+      setUiNotice(uiCommand.message)
+      if (uiCommand.tab) setRightPanelTab(uiCommand.tab)
+      if (uiCommand.selectedObjectId) setSelectedObjectId(uiCommand.selectedObjectId)
+      return
+    }
+
     // Local history commands — zero latency, no LLM
     if (UNDO_RE.test(trimmed))  { handleUndo();        return }
     if (REDO_RE.test(trimmed))  { handleRedo();        return }
@@ -156,6 +170,7 @@ export default function App() {
 
     busyRef.current = true
     setErrorMsg('')
+    setUiNotice('')
     setStatusText(text)
     setLlmLoading(true)
 
@@ -204,6 +219,8 @@ export default function App() {
       ? '正在调用 AI'
       : errorMsg
         ? '发生错误'
+        : uiNotice
+          ? '界面已更新'
         : previewState === 'done' && previewCommands.length
           ? '全部完成'
           : '等待指令'
@@ -224,9 +241,9 @@ export default function App() {
 
         <section className="canvas-workspace" aria-label="画布区域">
           <div className="canvas-status-row">
-            <div className={`editor-status${llmLoading || drawingStatus ? ' active' : ''}${errorMsg ? ' error' : ''}`}>
+            <div className={`editor-status${llmLoading || drawingStatus || uiNotice ? ' active' : ''}${errorMsg ? ' error' : ''}`}>
               <span className="status-kicker">{statusLabel}</span>
-              {statusText && <span className="status-detail">{statusText}</span>}
+              {(statusText || uiNotice) && <span className="status-detail">{statusText || uiNotice}</span>}
             </div>
             <div className="scene-counter">{objects.length} 个对象</div>
           </div>
@@ -261,6 +278,8 @@ export default function App() {
           selectedObject={selectedObject}
           isBusy={isBusy}
           onApplyObjectUpdate={applyDirectObjectUpdate}
+          activeTab={rightPanelTab}
+          onTabChange={setRightPanelTab}
         />
       </main>
 
@@ -268,6 +287,7 @@ export default function App() {
         disabled={isBusy}
         onSubmitCommand={handleSubmitCommand}
         statusLabel={statusLabel}
+        onNotice={setUiNotice}
       />
     </div>
   )

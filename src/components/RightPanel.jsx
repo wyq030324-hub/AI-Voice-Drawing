@@ -20,12 +20,16 @@ export default function RightPanel({
   selectedObject,
   isBusy,
   onApplyObjectUpdate,
+  activeTab: controlledActiveTab,
+  onTabChange,
 }) {
-  const [activeTab, setActiveTab] = useState('preview')
+  const [localActiveTab, setLocalActiveTab] = useState('preview')
+  const activeTab = controlledActiveTab ?? localActiveTab
+  const setActiveTab = onTabChange ?? setLocalActiveTab
 
   useEffect(() => {
     if (selectedObject) setActiveTab('properties')
-  }, [selectedObject])
+  }, [selectedObject, setActiveTab])
 
   return (
     <aside className="right-panel">
