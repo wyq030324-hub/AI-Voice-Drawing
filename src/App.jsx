@@ -34,6 +34,7 @@ export default function App() {
   const [previewCommandIndex, setPreviewCommandIndex] = useState(-1)
   const [previewCaption,      setPreviewCaption]      = useState('')
   const [previewState,        setPreviewState]        = useState('idle')
+  const [selectedObjectId,    setSelectedObjectId]    = useState(null)
   // Only lengths are state; actual stacks live in refs to avoid stale-closure issues
   const [undoLen, setUndoLen] = useState(0)
   const [redoLen, setRedoLen] = useState(0)
@@ -44,6 +45,13 @@ export default function App() {
   const busyRef      = useRef(false)
 
   useEffect(() => { objectsRef.current = objects }, [objects])
+
+  useEffect(() => {
+    if (!selectedObjectId) return
+    if (!objects.some((obj) => obj.id === selectedObjectId)) {
+      setSelectedObjectId(null)
+    }
+  }, [objects, selectedObjectId])
 
   // ── Save current scene as undo snapshot, clear redo ──
   const pushSnapshot = useCallback(() => {
@@ -98,8 +106,41 @@ export default function App() {
     pushSnapshot()
     objectsRef.current = []
     setObjects([])
+    setSelectedObjectId(null)
     setStatusText('')
     setErrorMsg('')
+  }, [pushSnapshot])
+
+  const applyDirectObjectUpdate = useCallback((id, props) => {
+    if (busyRef.current || !id || !props || typeof props !== 'object') return false
+
+    const current = objectsRef.current.find((obj) => obj.id === id)
+    if (!current) {
+      setSelectedObjectId(null)
+      return false
+    }
+
+    const {
+      id: _ignoredId,
+      type: _ignoredType,
+      groupId: _ignoredGroupId,
+      groupLabel: _ignoredGroupLabel,
+      role: _ignoredRole,
+      ...safeProps
+    } = props
+
+    const changedProps = Object.fromEntries(
+      Object.entries(safeProps).filter(([key, value]) => current[key] !== value)
+    )
+
+    if (Object.keys(changedProps).length === 0) return false
+
+    pushSnapshot()
+    const next = applyCommand(objectsRef.current, { type: 'update', id, props: changedProps })
+    objectsRef.current = next
+    setObjects(next)
+    setErrorMsg('')
+    return true
   }, [pushSnapshot])
 
   // ── Main entry point: called by InputPanel on voice trigger / Enter ──
@@ -156,6 +197,7 @@ export default function App() {
   }, [runCommands, pushSnapshot])
 
   const isBusy = llmLoading || drawingStatus !== null
+  const selectedObject = objects.find((obj) => obj.id === selectedObjectId) ?? null
   const statusLabel = drawingStatus
     ? `正在执行第 ${drawingStatus.current}/${drawingStatus.total} 步`
     : llmLoading
@@ -199,7 +241,11 @@ export default function App() {
               </div>
             )}
             <div className="canvas-wrap">
-              <DrawCanvas objects={objects} />
+              <DrawCanvas
+                objects={objects}
+                selectedObjectId={selectedObjectId}
+                onSelectObject={setSelectedObjectId}
+              />
             </div>
           </div>
         </section>
@@ -212,6 +258,9 @@ export default function App() {
           undoLen={undoLen}
           redoLen={redoLen}
           objectCount={objects.length}
+          selectedObject={selectedObject}
+          isBusy={isBusy}
+          onApplyObjectUpdate={applyDirectObjectUpdate}
         />
       </main>
 

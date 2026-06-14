@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import CommandPreview from './CommandPreview'
+import PropertyPanel from './PropertyPanel'
 
 const TABS = [
   { id: 'preview', label: '指令预览' },
@@ -16,8 +17,15 @@ export default function RightPanel({
   undoLen,
   redoLen,
   objectCount,
+  selectedObject,
+  isBusy,
+  onApplyObjectUpdate,
 }) {
   const [activeTab, setActiveTab] = useState('preview')
+
+  useEffect(() => {
+    if (selectedObject) setActiveTab('properties')
+  }, [selectedObject])
 
   return (
     <aside className="right-panel">
@@ -47,9 +55,10 @@ export default function RightPanel({
         )}
 
         {activeTab === 'properties' && (
-          <EmptyPanel
-            title="属性面板"
-            text="后续选中对象后，可在这里编辑坐标、尺寸、颜色和描边。"
+          <PropertyPanel
+            object={selectedObject}
+            disabled={isBusy}
+            onApply={onApplyObjectUpdate}
           />
         )}
 

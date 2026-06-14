@@ -24,6 +24,10 @@ Add or replace an object (existing id → object is replaced in-place):
 {"type":"line","id":"ground","x1":0,"y1":85,"x2":100,"y2":85,"stroke":"#4a7c4e","width":3}
 {"type":"text","id":"title","x":50,"y":5,"content":"Hello","size":6,"fill":"#222"}
 
+Optional visual props:
+  opacity     → number from 0 to 1, e.g. 0.7
+  strokeWidth → CSS pixel number for circle / rect / line outlines
+
 Modify an existing object — only listed props change, others are untouched:
 {"type":"update","id":"sun","props":{"fill":"#FF4500","stroke":"#CC2200"}}
 
@@ -122,6 +126,49 @@ Important editing rules:
 - For composite object deletion, prefer one {"type":"delete","id":"<groupId>","scope":"group"} command.
 - Existing scene objects without groupId still use normal single-object update/delete behavior.
 - If the target object cannot be matched confidently from "Current Scene", return [].
+
+=== PRECISE PARAMETER EDITING ===
+When the user gives exact coordinates, sizes, colors, opacity, or stroke width,
+use normal object-level update commands with props. Do not create a new command type.
+
+Supported precise edits:
+- Exact position:
+  User: "move the sun to x=80, y=20"
+  Output: [{"type":"update","id":"sun","props":{"x":80,"y":20}}]
+
+- Relative movement:
+  User: "move the roof up by 3 units"
+  Output: [{"type":"update","id":"house_1_roof_left","props":{"y1":47,"y2":31}},{"type":"update","id":"house_1_roof_right","props":{"y1":31,"y2":47}}]
+  Calculate absolute final values from Current Scene before returning JSON.
+
+- Exact size:
+  User: "set the rectangle width to 25 and height to 16"
+  Output: [{"type":"update","id":"rect_1","props":{"w":25,"h":16}}]
+  User: "change the sun radius to 6"
+  Output: [{"type":"update","id":"sun","props":{"r":6}}]
+
+- Exact color:
+  User: "make the roof #C2410C"
+  Output: [{"type":"update","id":"house_1_roof_left","props":{"stroke":"#C2410C"}},{"type":"update","id":"house_1_roof_right","props":{"stroke":"#C2410C"}}]
+  Use fill for filled objects and stroke for line objects or outlines. CSS color strings and HEX are allowed.
+
+- Opacity:
+  User: "set the window opacity to 70%"
+  Output: [{"type":"update","id":"house_1_window_left","props":{"opacity":0.7}}]
+  Convert percentages to 0–1 numbers.
+
+- Stroke:
+  User: "add a white outline to the roof, width 2"
+  Output: [{"type":"update","id":"house_1_roof_left","props":{"stroke":"#FFFFFF","strokeWidth":2}},{"type":"update","id":"house_1_roof_right","props":{"stroke":"#FFFFFF","strokeWidth":2}}]
+
+Precise editing rules:
+- Use the exact id from Current Scene. If no reliable target object exists, return [].
+- Numeric position and size props must be finite numbers in 0–100 scene-space.
+- opacity must be between 0 and 1.
+- strokeWidth must be a positive number.
+- Do not output id, type, groupId, groupLabel, or role inside update.props.
+- Do not implement relative HSL/HSV/color-theory edits such as "increase saturation 15%",
+  "make hue warmer", or "lower brightness 10%"; return [] if that is the only request.
 
 === NAMING RULES ===
 1. Every NEW object needs a short, lowercase, underscore_separated English id:
