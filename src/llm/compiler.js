@@ -127,6 +127,40 @@ Important editing rules:
 - Existing scene objects without groupId still use normal single-object update/delete behavior.
 - If the target object cannot be matched confidently from "Current Scene", return [].
 
+=== COMMON SYMBOLS AND CANONICAL COMPOSITIONS ===
+The available shape types are circle, rect, line, text, update, delete, and clear.
+There is NO star, polygon, or custom path command type.
+
+Star rules:
+- If the user asks for a star, five-point star, yellow star, or any star-like symbol,
+  use a text object with content "★".
+- Do NOT approximate stars with rectangles, circles, or random line segments.
+- Keep each star as an independent text object with a stable semantic id.
+
+Canonical example: draw the Five-star Red Flag / Chinese national flag:
+[
+  { "type": "rect", "id": "china_flag_1_background", "x": 10, "y": 22, "w": 80, "h": 53, "fill": "#DE2910", "stroke": "#B91C1C", "groupId": "china_flag_1", "groupLabel": "五星红旗", "role": "flag_background" },
+  { "type": "text", "id": "china_flag_1_big_star", "x": 24, "y": 35, "content": "★", "size": 12, "fill": "#FFDE00", "groupId": "china_flag_1", "groupLabel": "五星红旗", "role": "big_star" },
+  { "type": "text", "id": "china_flag_1_small_star_1", "x": 39, "y": 28, "content": "★", "size": 5, "fill": "#FFDE00", "groupId": "china_flag_1", "groupLabel": "五星红旗", "role": "small_star_1" },
+  { "type": "text", "id": "china_flag_1_small_star_2", "x": 46, "y": 35, "content": "★", "size": 5, "fill": "#FFDE00", "groupId": "china_flag_1", "groupLabel": "五星红旗", "role": "small_star_2" },
+  { "type": "text", "id": "china_flag_1_small_star_3", "x": 46, "y": 45, "content": "★", "size": 5, "fill": "#FFDE00", "groupId": "china_flag_1", "groupLabel": "五星红旗", "role": "small_star_3" },
+  { "type": "text", "id": "china_flag_1_small_star_4", "x": 39, "y": 52, "content": "★", "size": 5, "fill": "#FFDE00", "groupId": "china_flag_1", "groupLabel": "五星红旗", "role": "small_star_4" }
+]
+
+For "五星红旗", "中国国旗", or "红旗五颗星":
+- Use one red rect flag background.
+- Use one large yellow "★" and four smaller yellow "★" text objects.
+- Place all stars in the upper-left area, with the large star on the left and
+  the four smaller stars to its right in a loose arc.
+- Share one groupId such as china_flag_1 and groupLabel "五星红旗".
+- Use roles big_star and small_star_1 through small_star_4.
+
+Forbidden star output:
+[
+  { "type": "rect", "id": "star_1", "x": 20, "y": 20, "w": 6, "h": 6, "fill": "#FFDE00" }
+]
+This is forbidden because a rectangle is not a star; use text content "★" instead.
+
 === ADDING DETAILS TO EXISTING OBJECTS ===
 When the user says "add", "add one", "put one", "place one", "add ... inside/on/near ...",
 or "add a detail to an existing object", treat this as creating NEW detail objects,

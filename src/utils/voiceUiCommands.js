@@ -11,9 +11,13 @@ const PANEL_COMMANDS = [
 const SYNONYMS = {
   太阳: ['sun'],
   房子: ['house'],
+  房屋: ['house'],
+  屋子: ['house'],
   屋顶: ['roof'],
+  房顶: ['roof'],
   墙体: ['wall'],
   门: ['door'],
+  房门: ['door'],
   窗户: ['window'],
   左窗户: ['window_left'],
   右窗户: ['window_right'],
@@ -28,6 +32,10 @@ const SYNONYMS = {
   方块: ['rect'],
   线段: ['line'],
   文字: ['text'],
+  文本: ['text'],
+  五星红旗: ['china_flag', 'flag'],
+  中国国旗: ['china_flag', 'flag'],
+  国旗: ['flag'],
 }
 
 const DISPLAY_NAMES = {
@@ -48,7 +56,36 @@ const DISPLAY_NAMES = {
   rect: '矩形',
   line: '线段',
   text: '文本',
+  flag: '国旗',
+  china_flag: '五星红旗',
 }
+
+const GROUP_CONCEPTS = [
+  { display: '五星红旗', terms: ['五星红旗', '中国国旗', '国旗'], tokens: ['china_flag', 'flag'] },
+  { display: '房子', terms: ['房子', '房屋', '屋子'], tokens: ['house'] },
+  { display: '树', terms: ['树'], tokens: ['tree'] },
+  { display: '云', terms: ['云'], tokens: ['cloud'] },
+]
+
+const PART_CONCEPTS = [
+  { display: '左窗户', terms: ['左窗户', '左边窗户', '左侧窗户'], tokens: ['window_left'] },
+  { display: '右窗户', terms: ['右窗户', '右边窗户', '右侧窗户'], tokens: ['window_right'] },
+  { display: '屋顶', terms: ['屋顶', '房顶'], tokens: ['roof', 'roof_left', 'roof_right'] },
+  { display: '墙体', terms: ['墙体', '墙'], tokens: ['wall'] },
+  { display: '门', terms: ['房门', '门'], tokens: ['door'] },
+  { display: '窗户', terms: ['窗户'], tokens: ['window'] },
+  { display: '树干', terms: ['树干'], tokens: ['trunk'] },
+  { display: '树冠', terms: ['树冠'], tokens: ['crown'] },
+]
+
+const OBJECT_CONCEPTS = [
+  { display: '太阳', terms: ['太阳'], tokens: ['sun'] },
+  { display: '月亮', terms: ['月亮'], tokens: ['moon'] },
+  { display: '圆形', terms: ['圆形', '圆'], tokens: ['circle'] },
+  { display: '矩形', terms: ['矩形', '方块'], tokens: ['rect'] },
+  { display: '线段', terms: ['线段'], tokens: ['line'] },
+  { display: '文本', terms: ['文本', '文字'], tokens: ['text'] },
+]
 
 export function parseLongVoiceTranscript(text) {
   const source = String(text ?? '').trim()
@@ -104,23 +141,25 @@ export function parseVoiceUiCommand(text, objects) {
     }
   }
 
+  const targetSpec = buildTargetSpec(propertyTarget.term)
+  const displayTerm = targetSpec.displayTerm || propertyTarget.displayTerm
   const matches = findMatchingObjects(propertyTarget.term, objects)
   if (matches.length === 0) {
     return {
       handled: true,
       type: 'object-not-found',
-      message: `没有找到“${propertyTarget.displayTerm}”`,
+      message: `没有找到“${displayTerm}”`,
     }
   }
   if (matches.length > 1) {
     return {
       handled: true,
       type: 'object-ambiguous',
-      message: `找到多个“${propertyTarget.displayTerm}”，请说得更具体，例如左边的树或右边的窗户`,
+      message: `找到多个“${displayTerm}”，请说得更具体，例如左边的树或右边的窗户`,
     }
   }
 
-  const displayName = displayObjectName(matches[0], propertyTarget.displayTerm)
+  const displayName = displayObjectName(matches[0], displayTerm)
   return {
     handled: true,
     type: 'show-object-properties',
@@ -133,8 +172,15 @@ export function parseVoiceUiCommand(text, objects) {
 export function findMatchingObjects(term, objects) {
   if (!Array.isArray(objects)) return []
 
-  const normalizedTerm = normalize(term)
-  const tokens = new Set([normalizedTerm, ...(SYNONYMS[term] ?? [])].map(normalize))
+  const targetSpec = buildTargetSpec(term)
+  if (targetSpec.groupTokens.length && targetSpec.partTokens.length) {
+    return objects.filter((object) => (
+      matchesGroupedObject(object, targetSpec.groupTokens) &&
+      matchesObjectPart(object, targetSpec.partTokens)
+    ))
+  }
+
+  const tokens = new Set(targetSpec.tokens.map(normalize))
   const scored = []
 
   for (const object of objects) {
@@ -145,6 +191,80 @@ export function findMatchingObjects(term, objects) {
   if (!scored.length) return []
   const bestScore = Math.max(...scored.map((item) => item.score))
   return scored.filter((item) => item.score === bestScore).map((item) => item.object)
+}
+
+function buildTargetSpec(term) {
+  const compactTerm = normalizeTargetTerm(term)
+  const group = findConcept(compactTerm, GROUP_CONCEPTS)
+  const part = findConcept(compactTerm, PART_CONCEPTS)
+
+  if (group && part) {
+    return {
+      displayTerm: `${group.display}的${part.display}`,
+      groupTokens: expandConceptTokens(compactTerm, group),
+      partTokens: expandConceptTokens(part.display, part),
+      tokens: expandConceptTokens(compactTerm, group, part),
+    }
+  }
+
+  const concept = part || group || findConcept(compactTerm, OBJECT_CONCEPTS)
+  return {
+    displayTerm: concept?.display || compactTerm || term,
+    groupTokens: [],
+    partTokens: [],
+    tokens: expandConceptTokens(compactTerm, concept),
+  }
+}
+
+function normalizeTargetTerm(term) {
+  return normalize(term)
+    .replace(/里的/g, '')
+    .replace(/里面的/g, '')
+    .replace(/中的/g, '')
+    .replace(/中间的/g, '')
+    .replace(/的/g, '')
+    .replace(/里/g, '')
+}
+
+function findConcept(compactTerm, concepts) {
+  return concepts
+    .flatMap((concept) => concept.terms.map((term) => ({ concept, term: normalizeTargetTerm(term) })))
+    .filter((item) => item.term && compactTerm.includes(item.term))
+    .sort((a, b) => b.term.length - a.term.length)[0]?.concept ?? null
+}
+
+function expandConceptTokens(term, ...concepts) {
+  const tokens = new Set([normalize(term)])
+  for (const concept of concepts) {
+    if (!concept) continue
+    for (const item of concept.terms) tokens.add(normalizeTargetTerm(item))
+    for (const item of concept.tokens) tokens.add(normalize(item))
+  }
+  const synonymTokens = SYNONYMS[term] ?? SYNONYMS[normalize(term)] ?? []
+  for (const item of synonymTokens) tokens.add(normalize(item))
+  return [...tokens].filter(Boolean)
+}
+
+function matchesGroupedObject(object, tokens) {
+  const values = [object?.groupId, object?.groupLabel, object?.id]
+  return tokens.some((token) => matchesAnyValue(token, values))
+}
+
+function matchesObjectPart(object, tokens) {
+  const values = [object?.role, object?.id, object?.type]
+  return tokens.some((token) => matchesAnyValue(token, values))
+}
+
+function matchesAnyValue(token, values) {
+  const normalizedToken = normalize(token)
+  if (!normalizedToken) return false
+  return values.some((value) => {
+    const normalizedValue = normalize(value)
+    return normalizedValue &&
+      (normalizedValue === normalizedToken ||
+        normalizedValue.includes(normalizedToken) ||
+        normalizedToken.includes(normalizedValue))
+  })
 }
 
 function scoreObject(object, tokens) {
