@@ -1,0 +1,141 @@
+.panel {
+  min-height: 100%;
+  border: 1px solid #263244;
+  border-radius: 14px;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e5edf8;
+}
+
+.empty {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.empty h2,
+.identity h2 {
+  margin: 0 0 0.75rem;
+  color: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.empty p {
+  margin: 0;
+  color: #8fa1b7;
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #263244;
+}
+
+.readOnlyRow {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.readOnlyRow span {
+  color: #8fa1b7;
+  font-weight: 750;
+}
+
+.readOnlyRow strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #e5edf8;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+}
+
+.field span {
+  color: #8fa1b7;
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  outline: none;
+  padding: 0.45rem 0.55rem;
+  background: #0b1220;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 0.84rem;
+  transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+
+.field input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+}
+
+.field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.error {
+  margin: 0.8rem 0 0;
+  border: 1px solid rgba(251, 113, 133, 0.45);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  color: #fecdd3;
+  background: rgba(127, 29, 29, 0.24);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.applyButton {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 0.9rem;
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  border-radius: 11px;
+  background: rgba(5, 150, 105, 0.18);
+  color: #d1fae5;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+}
+
+.applyButton:not(:disabled):hover {
+  border-color: rgba(52, 211, 153, 0.8);
+  background: rgba(5, 150, 105, 0.28);
+}
+
+.applyButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}

@@ -18,9 +18,19 @@ export function renderObjects(ctx, objects, w, h) {
   const ry = (v) => (v / 100) * h
   const rm = (v) => (v / 100) * minDim
   const ok = (...vals) => vals.every((v) => typeof v === 'number' && isFinite(v))
+  const opacity = (obj) => ok(obj?.opacity) ? Math.max(0, Math.min(1, obj.opacity)) : 1
+  const strokeWidth = (obj, fallback = 1) => ok(obj?.strokeWidth) && obj.strokeWidth > 0
+    ? obj.strokeWidth
+    : ok(obj?.width) && obj.width > 0
+      ? obj.width
+      : fallback
 
   for (const obj of objects) {
+    ctx.save()
     try {
+      ctx.globalAlpha = opacity(obj)
+      ctx.lineWidth = strokeWidth(obj)
+
       switch (obj?.type) {
         case 'circle': {
           const { x, y, r, fill, stroke } = obj
@@ -42,13 +52,13 @@ export function renderObjects(ctx, objects, w, h) {
         }
 
         case 'line': {
-          const { x1, y1, x2, y2, stroke, width } = obj
+          const { x1, y1, x2, y2, stroke } = obj
           if (!ok(x1, y1, x2, y2)) { console.warn('[renderer] line bad params', obj); break }
           ctx.beginPath()
           ctx.moveTo(rx(x1), ry(y1))
           ctx.lineTo(rx(x2), ry(y2))
           ctx.strokeStyle = stroke || '#000'
-          ctx.lineWidth   = ok(width) ? width : 1
+          ctx.lineWidth   = strokeWidth(obj)
           ctx.stroke()
           break
         }
@@ -72,6 +82,8 @@ export function renderObjects(ctx, objects, w, h) {
       }
     } catch (err) {
       console.warn('[renderer] runtime error on object:', obj, err)
+    } finally {
+      ctx.restore()
     }
   }
 }
