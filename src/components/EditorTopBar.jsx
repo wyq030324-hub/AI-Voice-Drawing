@@ -7,18 +7,23 @@ export default function EditorTopBar({
   onClear,
   onExportPng,
   onExportSvg,
+  onHome,
 }) {
   return (
     <header className="editor-topbar">
       <div className="brand-block">
-        <div className="brand-mark">AV</div>
+        <div className="brand-mark">AI</div>
         <div>
-          <h1>AI-Voice-Drawing</h1>
-          <p>Voice-first editable canvas</p>
+          <h1>AI 语音绘图</h1>
+          <p>可编辑矢量画布</p>
         </div>
       </div>
 
       <nav className="topbar-actions" aria-label="编辑器操作">
+        <button className="toolbar-button home-button" onClick={onHome} disabled={isBusy}>
+          首页
+        </button>
+        <span className="toolbar-divider" aria-hidden="true" />
         <button className="toolbar-button" onClick={onUndo} disabled={isBusy || undoLen === 0}>
           撤销
         </button>
@@ -29,12 +34,6 @@ export default function EditorTopBar({
           清空
         </button>
         <span className="toolbar-divider" aria-hidden="true" />
-        <button className="toolbar-button ghost" disabled title="即将支持">
-          网格
-        </button>
-        <button className="toolbar-button ghost" disabled title="即将支持">
-          吸附
-        </button>
         <button className="toolbar-button" onClick={onExportPng} disabled={isBusy}>
           导出 PNG
         </button>
