@@ -6,6 +6,7 @@ import RightPanel from './components/RightPanel'
 import BottomCommandBar from './components/BottomCommandBar'
 import { applyCommand } from './commands/executor'
 import { compile } from './llm/compiler'
+import { downloadTextFile, sceneToSvg } from './utils/exportScene'
 import { parseVoiceUiCommand } from './utils/voiceUiCommands'
 import './App.css'
 
@@ -18,6 +19,19 @@ const DEMO_COMMANDS = [
 ]
 
 const STEP_DELAY_MS = 300
+const EXPORT_PNG_NAME = 'ai-voice-drawing.png'
+const EXPORT_SVG_NAME = 'ai-voice-drawing.svg'
+const EXAMPLE_PROMPTS = [
+  '画一座带红色屋顶、两扇窗户和一扇门的小房子',
+  '把房子整体向右移动 5 个单位',
+  '查看房子门的属性',
+  '把门改成深棕色，透明度设为 0.85',
+  '画一个绿色太阳',
+  '在绿色太阳中间加一个五角星',
+  '生成五星红旗',
+  '打开属性',
+  '打开图层',
+]
 
 // Exact-match regexes for local history commands — avoids false positives
 // e.g. "把颜色恢复为红色" should go to LLM, but "恢复" alone triggers redo
@@ -38,6 +52,7 @@ export default function App() {
   const [selectedObjectId,    setSelectedObjectId]    = useState(null)
   const [rightPanelTab,       setRightPanelTab]       = useState('preview')
   const [uiNotice,            setUiNotice]            = useState('')
+  const [draftCommand,        setDraftCommand]        = useState('')
   // Only lengths are state; actual stacks live in refs to avoid stale-closure issues
   const [undoLen, setUndoLen] = useState(0)
   const [redoLen, setRedoLen] = useState(0)
@@ -46,6 +61,7 @@ export default function App() {
   const undoStackRef = useRef([]) // SceneObject[][]
   const redoStackRef = useRef([]) // SceneObject[][]
   const busyRef      = useRef(false)
+  const canvasRef    = useRef(null)
 
   useEffect(() => { objectsRef.current = objects }, [objects])
 
@@ -113,6 +129,64 @@ export default function App() {
     setStatusText('')
     setErrorMsg('')
   }, [pushSnapshot])
+
+  const handleExportPng = useCallback(async () => {
+    const canvas = canvasRef.current
+    if (!canvas) {
+      setErrorMsg('当前画布尚未准备好，暂时无法导出 PNG。')
+      return
+    }
+
+    try {
+      if (typeof canvas.toBlob !== 'function') {
+        const fallbackLink = document.createElement('a')
+        fallbackLink.href = canvas.toDataURL('image/png')
+        fallbackLink.download = EXPORT_PNG_NAME
+        document.body.appendChild(fallbackLink)
+        fallbackLink.click()
+        fallbackLink.remove()
+        setErrorMsg('')
+        setUiNotice('已导出 PNG 文件')
+        return
+      }
+
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((nextBlob) => {
+          if (nextBlob) resolve(nextBlob)
+          else reject(new Error('empty-blob'))
+        }, 'image/png')
+      })
+
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = EXPORT_PNG_NAME
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      setErrorMsg('')
+      setUiNotice('已导出 PNG 文件')
+    } catch {
+      setErrorMsg('导出 PNG 失败，请稍后重试。')
+    }
+  }, [])
+
+  const handleExportSvg = useCallback(() => {
+    try {
+      const svg = sceneToSvg(objectsRef.current)
+      downloadTextFile(EXPORT_SVG_NAME, svg, 'image/svg+xml;charset=utf-8')
+      setErrorMsg('')
+      setUiNotice('已导出 SVG 文件')
+    } catch {
+      setErrorMsg('导出 SVG 失败，请稍后重试。')
+    }
+  }, [])
+
+  const handlePickExample = useCallback((example) => {
+    setDraftCommand(example)
+    setUiNotice('示例指令已填入输入框')
+  }, [])
 
   const applyDirectObjectUpdate = useCallback((id, props) => {
     if (busyRef.current || !id || !props || typeof props !== 'object') return false
@@ -234,6 +308,8 @@ export default function App() {
         onUndo={handleUndo}
         onRedo={handleRedo}
         onClear={handleClearCanvas}
+        onExportPng={handleExportPng}
+        onExportSvg={handleExportSvg}
       />
 
       <main className="editor-main">
@@ -254,7 +330,7 @@ export default function App() {
             {objects.length === 0 && !isBusy && (
               <div className="canvas-empty-state">
                 <strong>从一句话开始绘画</strong>
-                <span>在底部输入或说出你的创作想法，AI 会逐步生成可编辑对象。</span>
+                <span>在底部输入或说出你的创作想法，AI 会逐步生成可编辑对象。你也可以点示例指令快速开始。</span>
               </div>
             )}
             <div className="canvas-wrap">
@@ -262,6 +338,7 @@ export default function App() {
                 objects={objects}
                 selectedObjectId={selectedObjectId}
                 onSelectObject={setSelectedObjectId}
+                canvasRef={canvasRef}
               />
             </div>
           </div>
@@ -288,6 +365,10 @@ export default function App() {
         onSubmitCommand={handleSubmitCommand}
         statusLabel={statusLabel}
         onNotice={setUiNotice}
+        draftValue={draftCommand}
+        onDraftChange={setDraftCommand}
+        examples={EXAMPLE_PROMPTS}
+        onPickExample={handlePickExample}
       />
     </div>
   )

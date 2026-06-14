@@ -20,7 +20,13 @@ function extractTrigger(text) {
   return null
 }
 
-export default function InputPanel({ onSubmitCommand, disabled = false, onNotice }) {
+export default function InputPanel({
+  onSubmitCommand,
+  disabled = false,
+  onNotice,
+  draftValue = '',
+  onDraftChange,
+}) {
   const { isSupported, isListening, interimText, finalText, error, start, stop, clearTranscript } =
     useSpeechRecognition()
   const textRef = useRef(null)
@@ -29,6 +35,9 @@ export default function InputPanel({ onSubmitCommand, disabled = false, onNotice
 
   // Speech is unavailable when the API is missing OR the user denied mic access
   const speechUnavailable = !isSupported || error === 'permission-denied'
+  const setDraft = useCallback((value) => {
+    onDraftChange?.(value)
+  }, [onDraftChange])
 
   // Auto-focus + visually highlight text input whenever speech becomes unavailable
   useEffect(() => {
@@ -120,21 +129,20 @@ export default function InputPanel({ onSubmitCommand, disabled = false, onNotice
   const handleTextKey = useCallback((e) => {
     if (disabled || e.key !== 'Enter' || e.shiftKey) return
     e.preventDefault()
-    const text = e.currentTarget.value.trim()
+    const text = draftValue.trim()
     if (!text) return
     onSubmitCommand(text)
-    e.currentTarget.value = ''
-  }, [disabled, onSubmitCommand])
+    setDraft('')
+  }, [disabled, draftValue, onSubmitCommand, setDraft])
 
   const handleTextSubmit = useCallback((e) => {
     e.preventDefault()
     if (disabled) return
-    const input = textRef.current
-    const text = input?.value.trim()
+    const text = draftValue.trim()
     if (!text) return
     onSubmitCommand(text)
-    input.value = ''
-  }, [disabled, onSubmitCommand])
+    setDraft('')
+  }, [disabled, draftValue, onSubmitCommand, setDraft])
 
   return (
     <div className={styles.panel}>
@@ -219,6 +227,8 @@ export default function InputPanel({ onSubmitCommand, disabled = false, onNotice
           type="text"
           className={`${styles.textInput} ${speechUnavailable ? styles.textInputHighlighted : ''}`}
           placeholder="输入绘图指令，按 Enter 提交…"
+          value={draftValue}
+          onChange={(e) => setDraft(e.currentTarget.value)}
           onKeyDown={handleTextKey}
           disabled={disabled}
         />
