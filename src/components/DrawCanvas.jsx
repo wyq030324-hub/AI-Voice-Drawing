@@ -21,6 +21,7 @@ export default function DrawCanvas({ objects, selectedObjectId = null, onSelectO
     canvas.width  = width
     canvas.height = height
     const ctx = canvas.getContext('2d')
+    drawCoordinateGrid(ctx, width, height)
     renderObjects(ctx, objects, width, height)
     if (selectedObject) renderSelection(ctx, selectedObject, width, height)
   }, [objects, selectedObject])
@@ -50,6 +51,52 @@ export default function DrawCanvas({ objects, selectedObjectId = null, onSelectO
       style={{ display: 'block', width: '100%', height: '100%' }}
     />
   )
+}
+
+function drawCoordinateGrid(ctx, width, height) {
+  const rx = (value) => (value / 100) * width
+  const ry = (value) => (value / 100) * height
+
+  ctx.save()
+  ctx.lineWidth = 1
+  ctx.font = '11px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  for (let value = 0; value <= 100; value += 10) {
+    const x = rx(value)
+    const y = ry(value)
+    const isCenter = value === 50
+    const isEdge = value === 0 || value === 100
+
+    ctx.beginPath()
+    ctx.strokeStyle = isCenter
+      ? 'rgba(14, 165, 233, 0.26)'
+      : isEdge
+        ? 'rgba(15, 23, 42, 0.20)'
+        : 'rgba(15, 23, 42, 0.08)'
+    ctx.lineWidth = isCenter ? 1.2 : 1
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, height)
+    ctx.moveTo(0, y)
+    ctx.lineTo(width, y)
+    ctx.stroke()
+  }
+
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.24)'
+  ctx.strokeRect(0.5, 0.5, width - 1, height - 1)
+
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.45)'
+  for (const value of [0, 50, 100]) {
+    const x = rx(value)
+    const y = ry(value)
+    const xLabel = value === 0 ? 12 : value === 100 ? width - 16 : x
+    const yLabel = value === 0 ? 12 : value === 100 ? height - 12 : y
+    ctx.fillText(String(value), xLabel, 12)
+    ctx.fillText(String(value), 16, yLabel)
+  }
+
+  ctx.restore()
 }
 
 function renderSelection(ctx, obj, width, height) {
