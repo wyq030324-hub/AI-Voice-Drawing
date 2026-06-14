@@ -2,6 +2,7 @@
 
 AI-Voice-Drawing 是一个语音优先的可编辑矢量绘图工具。
 用户可以用语音或文本描述想法，LLM 会把自然语言编译成结构化绘图命令，Canvas 再逐步执行这些命令。生成结果不是一次性的整图，而是一组可继续编辑的独立对象场景。
+
 视频演示demo：https://www.bilibili.com/video/BV1E6JP6cESY/?vd_source=5c638aa4012a07ef7ff64c926928a548
 
 ## 项目定位
