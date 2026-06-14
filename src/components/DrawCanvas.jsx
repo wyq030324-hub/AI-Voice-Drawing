@@ -6,9 +6,9 @@ import { clientPointToScenePoint, getObjectBounds, hitTestObjectAt } from '../ut
  * DrawCanvas — a full-size <canvas> that renders `objects` on every change
  * and automatically redraws when the element is resized.
  *
- * @param {{ objects: import('../commands/types').SceneObject[], selectedObjectId?: string|null, onSelectObject?: (id: string|null) => void }} props
+ * @param {{ objects: import('../commands/types').SceneObject[], selectedObjectId?: string|null, onSelectObject?: (id: string|null) => void, canvasRef?: import('react').MutableRefObject<HTMLCanvasElement|null> }} props
  */
-export default function DrawCanvas({ objects, selectedObjectId = null, onSelectObject }) {
+export default function DrawCanvas({ objects, selectedObjectId = null, onSelectObject, canvasRef: externalCanvasRef = null }) {
   const canvasRef = useRef(null)
   const selectedObject = objects.find((obj) => obj.id === selectedObjectId) ?? null
 
@@ -43,6 +43,16 @@ export default function DrawCanvas({ objects, selectedObjectId = null, onSelectO
     const hit = hitTestObjectAt(objects, point)
     onSelectObject(hit?.id ?? null)
   }, [objects, onSelectObject])
+
+  useEffect(() => {
+    if (!externalCanvasRef) return
+    externalCanvasRef.current = canvasRef.current
+    return () => {
+      if (externalCanvasRef.current === canvasRef.current) {
+        externalCanvasRef.current = null
+      }
+    }
+  }, [externalCanvasRef])
 
   return (
     <canvas

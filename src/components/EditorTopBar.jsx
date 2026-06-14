@@ -5,6 +5,8 @@ export default function EditorTopBar({
   onUndo,
   onRedo,
   onClear,
+  onExportPng,
+  onExportSvg,
 }) {
   return (
     <header className="editor-topbar">
@@ -33,10 +35,10 @@ export default function EditorTopBar({
         <button className="toolbar-button ghost" disabled title="即将支持">
           吸附
         </button>
-        <button className="toolbar-button ghost" disabled title="即将支持">
+        <button className="toolbar-button" onClick={onExportPng} disabled={isBusy}>
           导出 PNG
         </button>
-        <button className="toolbar-button ghost" disabled title="即将支持">
+        <button className="toolbar-button" onClick={onExportSvg} disabled={isBusy}>
           导出 SVG
         </button>
       </nav>
